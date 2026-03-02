@@ -1,6 +1,6 @@
 {
   "name": "clawport",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Universal porting tool for claw-ecosystem AI agent configurations",
   "bin": {
     "clawport": "dist/cli.js"
