@@ -86,13 +86,27 @@ export const AndyClawAdapter: Adapter = {
       agents: { list: agentList },
     };
 
-    // andyclaw has no channel support — flag any incoming channels
+    // andyclaw has no channel, memory, or skills support — flag all
     const allUnmapped = [
       ...unmappedRest,
       ...config.channels.map((ch) => ({
         source_path: `channels.${ch.type}`,
         value: ch,
         reason: "andyclaw is APK-bundled — no messaging channel support",
+      })),
+      ...(config.memory
+        ? [
+            {
+              source_path: "memory",
+              value: config.memory,
+              reason: "andyclaw has no memory backend config",
+            },
+          ]
+        : []),
+      ...config.skills.map((s) => ({
+        source_path: `skills[${s.name}]`,
+        value: s,
+        reason: "andyclaw has no skills/tools config",
       })),
     ];
 
@@ -106,6 +120,8 @@ export const AndyClawAdapter: Adapter = {
   },
 
   parse(_configPath: string, raw: unknown): AdapterResult {
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw))
+      return { ok: false, error: "expected object config" };
     const src = raw as AndyClawConfig;
     const unmapped: UnmappedField[] = [];
 

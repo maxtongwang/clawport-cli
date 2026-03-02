@@ -602,6 +602,27 @@ describe("skill normalization in export pipeline", () => {
   });
 });
 
+// ── Null / invalid raw input guard ──────────────────────────────────────────
+
+describe("parse() null/invalid input guard", () => {
+  const badInputs: Array<[string, unknown]> = [
+    ["null", null],
+    ["undefined", undefined],
+    ["number", 42],
+    ["string", "not-an-object"],
+    ["array", []],
+  ];
+
+  for (const adapter of ADAPTERS) {
+    for (const [label, bad] of badInputs) {
+      it(`${adapter.cloneName}: parse(${label}) returns ok:false`, () => {
+        const result = adapter.parse("dummy.json", bad);
+        expect(result.ok).toBe(false);
+      });
+    }
+  }
+});
+
 // ── Detection fingerprinting ─────────────────────────────────────────────────
 
 describe("detect() content fingerprinting", () => {

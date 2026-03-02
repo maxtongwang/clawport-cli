@@ -131,6 +131,8 @@ export const FreeclawAdapter: Adapter = {
   },
 
   parse(_configPath: string, raw: unknown): AdapterResult {
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw))
+      return { ok: false, error: "expected object config" };
     const src = raw as FreeclawConfig;
     const unmapped: UnmappedField[] = [];
 
