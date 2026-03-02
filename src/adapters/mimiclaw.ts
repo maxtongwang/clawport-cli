@@ -13,6 +13,7 @@ import type {
   UnmappedField,
 } from "../types.js";
 import { makeParsePersona, makeWritePersona } from "../persona.js";
+import { unmappedCanonicalExtras } from "./write-helpers.js";
 
 type MimiClawEnv = Record<string, string>;
 
@@ -104,6 +105,8 @@ export const MimiClawAdapter: Adapter = {
         value: s,
         reason: "mimiclaw has no skills/tools support",
       })),
+    
+    ...unmappedCanonicalExtras(config),
     ];
 
     if (allUnmapped.length > 0) {

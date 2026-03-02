@@ -12,6 +12,7 @@ import type {
   UnmappedField,
 } from "../types.js";
 import { makeParsePersona, makeWritePersona } from "../persona.js";
+import { unmappedCanonicalExtras } from "./write-helpers.js";
 
 // Raw config is Record<string, string> (parsed from KEY=VALUE by loadConfig)
 type BashoBotEnv = Record<string, string>;
@@ -75,6 +76,8 @@ export const BashoBotAdapter: Adapter = {
         value: s,
         reason: "bashobot tools are managed at runtime via /tools command",
       })),
+    
+    ...unmappedCanonicalExtras(config),
     ];
 
     // Telegram channel

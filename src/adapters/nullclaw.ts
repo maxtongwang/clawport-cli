@@ -13,6 +13,7 @@ import type {
   UnmappedField,
 } from "../types.js";
 import { makeParsePersona, makeWritePersona } from "../persona.js";
+import { unmappedCanonicalExtras } from "./write-helpers.js";
 
 interface NullClawConfig {
   agents?: {
@@ -143,6 +144,8 @@ export const NullClawAdapter: Adapter = {
         value: s,
         reason: "nullclaw skills schema not confirmed — not emitted",
       })),
+    
+    ...unmappedCanonicalExtras(config),
     ];
 
     if (allUnmapped.length > 0) {

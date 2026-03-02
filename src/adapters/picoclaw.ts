@@ -12,6 +12,7 @@ import type {
   UnmappedField,
 } from "../types.js";
 import { makeParsePersona, makeWritePersona } from "../persona.js";
+import { unmappedCanonicalExtras } from "./write-helpers.js";
 
 interface PicoClawConfig {
   agents?: {
@@ -128,6 +129,7 @@ export const PicoClawAdapter: Adapter = {
         value: s,
         reason: "picoclaw has no generic skills array — use named tools block",
       })),
+      ...unmappedCanonicalExtras(config),
     ];
     if (allUnmapped.length > 0) {
       out._clawport_unmapped = allUnmapped.map(

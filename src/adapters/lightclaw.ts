@@ -13,6 +13,7 @@ import type {
   UnmappedField,
 } from "../types.js";
 import { makeParsePersona, makeWritePersona } from "../persona.js";
+import { unmappedCanonicalExtras } from "./write-helpers.js";
 
 interface LightClawConfig {
   agent?: {
@@ -127,10 +128,11 @@ export const LightClawAdapter: Adapter = {
       }
     }
 
-    if (config.unmapped.length > 0) {
+    const allUnmapped = [...config.unmapped, ...unmappedCanonicalExtras(config)];
+    if (allUnmapped.length > 0) {
       lines.push("");
       lines.push("# --- UNMAPPED FIELDS ---");
-      for (const u of config.unmapped)
+      for (const u of allUnmapped)
         lines.push(`# ${u.source_path}: ${u.reason}`);
     }
 

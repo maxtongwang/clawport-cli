@@ -12,6 +12,7 @@ import type {
   UnmappedField,
 } from "../types.js";
 import { makeParsePersona, makeWritePersona } from "../persona.js";
+import { unmappedCanonicalExtras } from "./write-helpers.js";
 
 interface RuVectorConfig {
   agent?: {
@@ -119,10 +120,14 @@ export const RuVectorAdapter: Adapter = {
         lines.push(`${k} = ${tomlVal(v)}`);
     }
 
-    if (config.unmapped.length > 0) {
+    const allUnmapped = [
+      ...config.unmapped,
+      ...unmappedCanonicalExtras(config, new Set(["embedding_model"])),
+    ];
+    if (allUnmapped.length > 0) {
       lines.push("");
       lines.push("# --- UNMAPPED FIELDS ---");
-      for (const u of config.unmapped)
+      for (const u of allUnmapped)
         lines.push(`# ${u.source_path}: ${u.reason}`);
     }
 

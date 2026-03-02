@@ -12,6 +12,7 @@ import type {
   UnmappedField,
 } from "../types.js";
 import { makeParsePersona, makeWritePersona } from "../persona.js";
+import { unmappedCanonicalExtras } from "./write-helpers.js";
 
 interface KafClawConfig {
   agent?: {
@@ -123,8 +124,9 @@ export const KafClawAdapter: Adapter = {
       };
     }
 
-    if (config.unmapped.length > 0) {
-      out._clawport_unmapped = config.unmapped.map(
+    const allUnmapped = [...config.unmapped, ...unmappedCanonicalExtras(config)];
+    if (allUnmapped.length > 0) {
+      out._clawport_unmapped = allUnmapped.map(
         (u) => `${u.source_path}: ${u.reason}`,
       );
     }

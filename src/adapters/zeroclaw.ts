@@ -11,6 +11,7 @@ import type {
   UnmappedField,
 } from "../types.js";
 import { makeParsePersona, makeWritePersona } from "../persona.js";
+import { unmappedCanonicalExtras } from "./write-helpers.js";
 
 // Exact shape of zeroclaw config.toml as of schema_version above
 interface ZeroClawConfig {
@@ -152,10 +153,17 @@ export const ZeroClawAdapter: Adapter = {
       lines.push(`enabled = ${skill.enabled}`);
     }
 
-    if (config.unmapped.length > 0) {
+    const allUnmapped = [
+      ...config.unmapped,
+      ...unmappedCanonicalExtras(
+        config,
+        new Set(["embedding_model", "vector_dims"]),
+      ),
+    ];
+    if (allUnmapped.length > 0) {
       lines.push("");
       lines.push("# --- UNMAPPED FIELDS (review required) ---");
-      for (const u of config.unmapped) {
+      for (const u of allUnmapped) {
         lines.push(
           `# ${u.source_path}: ${u.reason} | value: ${JSON.stringify(u.value)}`,
         );

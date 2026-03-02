@@ -12,6 +12,7 @@ import type {
   UnmappedField,
 } from "../types.js";
 import { makeParsePersona, makeWritePersona } from "../persona.js";
+import { unmappedCanonicalExtras } from "./write-helpers.js";
 
 // Exact shape of openclaw config.yaml as of schema_version above
 interface OpenClawConfig {
@@ -161,9 +162,16 @@ export const OpenClawAdapter: Adapter = {
     }
 
     let result = yaml.dump(out, { lineWidth: 120 });
-    if (config.unmapped.length > 0) {
+    const allUnmapped = [
+      ...config.unmapped,
+      ...unmappedCanonicalExtras(
+        config,
+        new Set(["top_p", "frequency_penalty"]),
+      ),
+    ];
+    if (allUnmapped.length > 0) {
       result += "\n# --- UNMAPPED FIELDS (review required) ---\n";
-      for (const u of config.unmapped) {
+      for (const u of allUnmapped) {
         result += `# ${u.source_path}: ${u.reason} | value: ${JSON.stringify(u.value)}\n`;
       }
     }

@@ -13,6 +13,7 @@ import type {
   UnmappedField,
 } from "../types.js";
 import { makeParsePersona, makeWritePersona } from "../persona.js";
+import { unmappedCanonicalExtras } from "./write-helpers.js";
 
 interface TitanClawConfig {
   agents?: Array<{
@@ -198,10 +199,14 @@ export const TitanClawAdapter: Adapter = {
       lines.push(`enabled = ${s.enabled}`);
     }
 
-    if (unmappedRest.length > 0) {
+    const allUnmapped = [
+      ...unmappedRest,
+      ...unmappedCanonicalExtras(config, new Set(["top_p", "frequency_penalty"])),
+    ];
+    if (allUnmapped.length > 0) {
       lines.push("");
       lines.push("# --- UNMAPPED FIELDS ---");
-      for (const u of unmappedRest)
+      for (const u of allUnmapped)
         lines.push(`# ${u.source_path}: ${u.reason}`);
     }
 

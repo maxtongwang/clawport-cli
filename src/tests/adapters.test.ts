@@ -475,6 +475,92 @@ describe("write → parse roundtrip", () => {
   }
 });
 
+// ── Canonical extension field roundtrip tests ────────────────────────────────
+
+const EXTENDED_CANONICAL = {
+  ...MINIMAL_CANONICAL,
+  agent: {
+    ...MINIMAL_CANONICAL.agent,
+    top_p: 0.9,
+    frequency_penalty: 0.1,
+    presence_penalty: 0.2,
+    max_context: 128000,
+  },
+  memory: {
+    ...MINIMAL_CANONICAL.memory,
+    embedding_model: "text-embedding-3-small",
+    vector_dims: 1536,
+  },
+};
+
+describe("canonical extension fields: write() preserves or flags", () => {
+  it("openclaw: emits top_p and frequency_penalty; flags unsupported fields", () => {
+    const adapter = getAdapter("openclaw")!;
+    const out = adapter.write(EXTENDED_CANONICAL);
+    expect(out).toContain("top_p: 0.9");
+    expect(out).toContain("frequency_penalty: 0.1");
+    // presence_penalty, max_context, embedding_model, vector_dims not supported
+    expect(out).toContain("agent.presence_penalty");
+    expect(out).toContain("agent.max_context");
+    expect(out).toContain("memory.embedding_model");
+    expect(out).toContain("memory.vector_dims");
+  });
+
+  it("openfang: emits all 6 new canonical fields natively", () => {
+    const adapter = getAdapter("openfang")!;
+    const out = adapter.write(EXTENDED_CANONICAL);
+    expect(out).toContain("top_p = 0.9");
+    expect(out).toContain("presence_penalty = 0.2");
+    expect(out).toContain("max_context = 128000");
+    expect(out).toContain('embedding_model = "text-embedding-3-small"');
+    expect(out).toContain("vector_dims = 1536");
+    // Nothing should end up in unmapped
+    expect(out).not.toContain("UNMAPPED");
+  });
+
+  it("titanclaw: emits top_p and frequency_penalty; flags unsupported fields", () => {
+    const adapter = getAdapter("titanclaw")!;
+    const out = adapter.write(EXTENDED_CANONICAL);
+    expect(out).toContain("top_p = 0.9");
+    expect(out).toContain("frequency_penalty = 0.1");
+    expect(out).toContain("agent.presence_penalty");
+    expect(out).toContain("agent.max_context");
+    expect(out).toContain("memory.embedding_model");
+    expect(out).toContain("memory.vector_dims");
+  });
+
+  it("zeroclaw: emits embedding_model and vector_dimensions; flags unsupported fields", () => {
+    const adapter = getAdapter("zeroclaw")!;
+    const out = adapter.write(EXTENDED_CANONICAL);
+    expect(out).toContain('embedding_model = "text-embedding-3-small"');
+    expect(out).toContain("vector_dimensions = 1536");
+    expect(out).toContain("agent.top_p");
+    expect(out).toContain("agent.frequency_penalty");
+    expect(out).toContain("agent.presence_penalty");
+    expect(out).toContain("agent.max_context");
+  });
+
+  it("ruvector: emits embedding_model in [llm]; flags unsupported fields", () => {
+    const adapter = getAdapter("ruvector")!;
+    const out = adapter.write(EXTENDED_CANONICAL);
+    expect(out).toContain('embedding_model = "text-embedding-3-small"');
+    expect(out).toContain("agent.top_p");
+    expect(out).toContain("agent.presence_penalty");
+    expect(out).toContain("memory.vector_dims");
+  });
+
+  it("safeclaw (unsupporting adapter): flags all 6 new fields", () => {
+    const adapter = getAdapter("safeclaw")!;
+    const out = adapter.write(EXTENDED_CANONICAL);
+    expect(out).toContain("agent.top_p");
+    expect(out).toContain("agent.frequency_penalty");
+    expect(out).toContain("agent.presence_penalty");
+    expect(out).toContain("agent.max_context");
+    expect(out).toContain("memory.embedding_model");
+    expect(out).toContain("memory.vector_dims");
+  });
+});
+
 // ── Skill name normalization tests ───────────────────────────────────────────
 
 describe("normalizeSkillName / denormalizeSkillName", () => {
