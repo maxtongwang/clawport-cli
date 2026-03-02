@@ -117,6 +117,31 @@ describe("adapter write() smoke tests", () => {
   }
 });
 
+// ── write() with bare-minimum config (empty optional fields) ─────────────────
+
+const BARE_CANONICAL = {
+  agent: {
+    name: "bare-agent",
+    model: "claude-haiku-4-5",
+    provider: "anthropic",
+  },
+  channels: [],
+  memory: undefined,
+  skills: [],
+  unmapped: [],
+};
+
+describe("adapter write() with empty optional fields", () => {
+  for (const adapter of ADAPTERS) {
+    it(`${adapter.cloneName} write() does not throw with no channels/memory/skills`, () => {
+      expect(() => adapter.write(BARE_CANONICAL)).not.toThrow();
+      const output = adapter.write(BARE_CANONICAL);
+      expect(typeof output).toBe("string");
+      expect(output.length).toBeGreaterThan(0);
+    });
+  }
+});
+
 // ── Per-adapter parse() smoke tests ─────────────────────────────────────────
 
 describe("openclaw parse()", () => {
