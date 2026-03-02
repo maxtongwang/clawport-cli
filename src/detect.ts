@@ -163,6 +163,9 @@ function contentScore(adapter: Adapter, configFile: string): number {
     case "aionui":
       // ui block (Electron desktop)
       return obj.ui !== undefined ? 2 : 0;
+    case "picobot":
+      // webhook_port is picobot-specific (HTTP webhook server)
+      return obj.webhook_port !== undefined ? 2 : 0;
     default:
       return 0;
   }

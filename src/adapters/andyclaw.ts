@@ -115,7 +115,7 @@ export const AndyClawAdapter: Adapter = {
 
     if (allUnmapped.length > 0) {
       out._clawport_unmapped = allUnmapped.map(
-        (u) => `${u.source_path}: ${u.reason}`,
+        (u) => `${u.source_path}: ${u.reason} | value: ${JSON.stringify(u.value)}`,
       );
     }
 

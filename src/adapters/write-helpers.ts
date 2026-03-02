@@ -1,8 +1,19 @@
-// Shared write() utility for flagging new canonical fields that a target
-// adapter does not natively support. Added to every adapter's unmapped output
-// so fields aren't silently dropped on cross-adapter conversion.
+// Shared write() utilities used by TOML adapters and all adapters' unmapped
+// output sections.
 
 import type { CanonicalConfig, UnmappedField } from "../types.js";
+
+/** Escape a string for use inside a TOML double-quoted value. */
+export function esc(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+/** Serialize a value as a TOML literal (string, number, boolean, or JSON string). */
+export function tomlVal(v: unknown): string {
+  if (typeof v === "string") return `"${esc(v)}"`;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  return `"${esc(JSON.stringify(v))}"`;
+}
 
 const CANONICAL_EXTRAS: Array<{
   key: string;

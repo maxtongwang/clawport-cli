@@ -12,7 +12,7 @@ import type {
   UnmappedField,
 } from "../types.js";
 import { makeParsePersona, makeWritePersona } from "../persona.js";
-import { unmappedCanonicalExtras } from "./write-helpers.js";
+import { esc, tomlVal, unmappedCanonicalExtras } from "./write-helpers.js";
 
 interface MoltisConfig {
   agent?: {
@@ -415,11 +415,3 @@ export const MoltisAdapter: Adapter = {
   writePersona: makeWritePersona("toml", "agent.toml"),
 };
 
-function esc(s: string): string {
-  return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-}
-function tomlVal(v: unknown): string {
-  if (typeof v === "string") return `"${esc(v)}"`;
-  if (typeof v === "number" || typeof v === "boolean") return String(v);
-  return `"${esc(JSON.stringify(v))}"`;
-}

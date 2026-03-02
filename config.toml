@@ -1,0 +1,12 @@
+[agent]
+name = "mybot"
+model = "claude-sonnet-4-6"
+provider = "anthropic"
+
+[[skills]]
+name = "read_file"
+enabled = true
+
+[[skills]]
+name = "execute_bash"
+enabled = true
