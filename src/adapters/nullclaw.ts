@@ -127,25 +127,26 @@ export const NullClawAdapter: Adapter = {
       out.channels = channels;
     }
 
-    if (config.memory) {
-      out.memory = {
-        backend: config.memory.backend,
-        ...(config.memory.path && { path: config.memory.path }),
-        ...(config.memory.connection_string && {
-          connection_string: config.memory.connection_string,
-        }),
-      };
-    }
+    const allUnmapped = [
+      ...unmappedRest,
+      ...(config.memory
+        ? [
+            {
+              source_path: "memory",
+              value: config.memory,
+              reason: "nullclaw memory schema not confirmed — not emitted",
+            },
+          ]
+        : []),
+      ...config.skills.map((s) => ({
+        source_path: `skills[${s.name}]`,
+        value: s,
+        reason: "nullclaw skills schema not confirmed — not emitted",
+      })),
+    ];
 
-    if (config.skills.length > 0) {
-      out.skills = config.skills.map((s) => ({
-        name: s.name,
-        enabled: s.enabled,
-      }));
-    }
-
-    if (unmappedRest.length > 0) {
-      out._clawport_unmapped = unmappedRest.map(
+    if (allUnmapped.length > 0) {
+      out._clawport_unmapped = allUnmapped.map(
         (u) => `${u.source_path}: ${u.reason}`,
       );
     }

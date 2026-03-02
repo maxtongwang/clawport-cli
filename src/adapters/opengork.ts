@@ -61,6 +61,24 @@ export const OpenGorkAdapter: Adapter = {
             },
           ]
         : []),
+      ...(config.agent.max_tokens !== undefined
+        ? [
+            {
+              source_path: "agent.max_tokens",
+              value: config.agent.max_tokens,
+              reason: "opengork max_tokens is not configurable",
+            },
+          ]
+        : []),
+      ...(config.memory
+        ? [
+            {
+              source_path: "memory",
+              value: config.memory,
+              reason: "opengork has no memory backend config",
+            },
+          ]
+        : []),
       ...config.channels.map((ch) => ({
         source_path: `channels.${ch.type}`,
         value: ch,

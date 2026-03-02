@@ -84,6 +84,15 @@ export const ZClawAdapter: Adapter = {
             },
           ]
         : []),
+      ...(config.memory
+        ? [
+            {
+              source_path: "memory",
+              value: config.memory,
+              reason: "zclaw has no memory backend config",
+            },
+          ]
+        : []),
       ...config.channels
         .filter((c) => c.type !== "telegram")
         .map((ch) => ({

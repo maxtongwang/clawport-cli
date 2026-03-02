@@ -83,6 +83,15 @@ export const MimiClawAdapter: Adapter = {
             },
           ]
         : []),
+      ...(config.memory
+        ? [
+            {
+              source_path: "memory",
+              value: config.memory,
+              reason: "mimiclaw has no memory backend config",
+            },
+          ]
+        : []),
       ...config.channels
         .filter((c) => c.type !== "telegram")
         .map((ch) => ({
