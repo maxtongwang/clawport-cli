@@ -77,7 +77,16 @@ program
       process.exit(1);
     }
 
-    const raw = loadConfig(result.fingerprint.config_file);
+    let raw: unknown;
+    try {
+      raw = loadConfig(result.fingerprint.config_file);
+    } catch (e) {
+      console.error(
+        chalk.red("✗ Failed to read config:"),
+        (e as Error).message,
+      );
+      process.exit(1);
+    }
     const parsed = result.adapter.parse(result.fingerprint.config_file, raw);
 
     if (!parsed.ok) {
@@ -233,7 +242,13 @@ function runPort(
   }
 
   // Parse source → canonical
-  const raw = loadConfig(srcConfigFile);
+  let raw: unknown;
+  try {
+    raw = loadConfig(srcConfigFile);
+  } catch (e) {
+    console.error(chalk.red("✗ Failed to read config:"), (e as Error).message);
+    process.exit(1);
+  }
   const parsed = srcAdapter.parse(srcConfigFile, raw);
   if (!parsed.ok) {
     console.error(chalk.red("✗ Parse error:"), parsed.error);
@@ -287,7 +302,16 @@ function runPort(
         const personaFiles = target.writePersona(persona);
         for (const pf of personaFiles) {
           const destPath = path.join(outDir, pf.filename);
-          fs.writeFileSync(destPath, pf.content, "utf8");
+          try {
+            fs.writeFileSync(destPath, pf.content, "utf8");
+          } catch (e) {
+            console.error(
+              chalk.red("✗ Failed to write persona file:"),
+              destPath,
+              (e as Error).message,
+            );
+            process.exit(1);
+          }
           console.log(
             chalk.green(`✓ persona`),
             chalk.dim(`written to ${destPath}`),
@@ -306,7 +330,12 @@ function runPort(
   }
 
   const outFile = path.resolve(opts.out ?? defaultFile);
-  fs.writeFileSync(outFile, output, "utf8");
+  try {
+    fs.writeFileSync(outFile, output, "utf8");
+  } catch (e) {
+    console.error(chalk.red("✗ Failed to write output:"), (e as Error).message);
+    process.exit(1);
+  }
   console.log(
     chalk.green(`✓ ${srcName} → ${toName}`),
     chalk.dim(`written to ${outFile}`),

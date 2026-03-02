@@ -60,8 +60,9 @@ export const GripAiAdapter: Adapter = {
   write(config: CanonicalConfig): string {
     const agentSrc = config.agent;
     // grip-ai uses compound "provider/model" format
-    const model = agentSrc.model.includes("/")
-      ? agentSrc.model
+    const modelStr = agentSrc.model ?? "";
+    const model = modelStr.includes("/")
+      ? modelStr
       : `${agentSrc.provider}/${agentSrc.model}`;
 
     const out: Record<string, unknown> = {
