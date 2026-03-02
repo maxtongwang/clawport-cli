@@ -7,6 +7,7 @@ import os from "os";
 import path from "path";
 import { describe, it, expect } from "vitest";
 import { ADAPTERS, getAdapter } from "../adapters/index.js";
+import { detect } from "../detect.js";
 import {
   SKILL_ALIASES,
   normalizeSkillName,
@@ -598,5 +599,91 @@ describe("skill normalization in export pipeline", () => {
     };
     const output = target.write(config);
     expect(output).toContain("read_file");
+  });
+});
+
+// ── Detection fingerprinting ─────────────────────────────────────────────────
+
+describe("detect() content fingerprinting", () => {
+  function withTmpJson(content: object, fn: (dir: string) => void) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawport-detect-"));
+    try {
+      fs.writeFileSync(
+        path.join(dir, "config.json"),
+        JSON.stringify(content),
+        "utf8",
+      );
+      fn(dir);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  const cases: Array<[string, object]> = [
+    [
+      "grip-ai",
+      {
+        agent: { model: "anthropic/claude-3" },
+        tools: [{ name: "bash", enabled: true }],
+      },
+    ],
+    ["nanobot", { llm: { provider: "anthropic" }, bot: { name: "test" } }],
+    ["smallclaw", { ollama: { host: "localhost" }, agent: { name: "a" } }],
+    [
+      "memubot",
+      { agent: { name: "a" }, memory: { backend: "sqlite" }, capabilities: [] },
+    ],
+    ["aionui", { agent: { name: "a" }, ui: { theme: "dark" } }],
+    [
+      "rowboat",
+      { llm: { provider: "anthropic" }, project: { name: "my-project" } },
+    ],
+    [
+      "nullclaw",
+      {
+        agents: {
+          list: [{ id: "primary", model: { primary: "anthropic/claude-3" } }],
+        },
+      },
+    ],
+    ["nanoclaw", { model: "anthropic:claude-3", name: "my-bot" }],
+    [
+      "kafclaw",
+      { agent: { name: "a" }, storage: { dsn: "postgres://localhost/db" } },
+    ],
+  ];
+
+  for (const [cloneName, content] of cases) {
+    it(`detects ${cloneName} from content when config.json is ambiguous`, () => {
+      withTmpJson(content, (dir) => {
+        const result = detect(dir);
+        expect(result).not.toBeNull();
+        expect(result!.fingerprint.name).toBe(cloneName);
+      });
+    });
+  }
+
+  it("prefers specific path pattern over bare config.json", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawport-detect-"));
+    try {
+      // Bare config.json that looks like picoclaw
+      fs.writeFileSync(
+        path.join(dir, "config.json"),
+        JSON.stringify({ agents: { defaults: { model_id: "claude-3" } } }),
+        "utf8",
+      );
+      // But also a grip-specific subdirectory config
+      const gripDir = path.join(dir, ".grip");
+      fs.mkdirSync(gripDir);
+      fs.writeFileSync(
+        path.join(gripDir, "config.json"),
+        JSON.stringify({ agent: { model: "anthropic/claude-3" }, tools: [] }),
+        "utf8",
+      );
+      const result = detect(dir);
+      expect(result!.fingerprint.name).toBe("grip-ai");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
