@@ -510,6 +510,7 @@ describe("canonical extension fields: write() preserves or flags", () => {
     const adapter = getAdapter("openfang")!;
     const out = adapter.write(EXTENDED_CANONICAL);
     expect(out).toContain("top_p = 0.9");
+    expect(out).toContain("frequency_penalty = 0.1");
     expect(out).toContain("presence_penalty = 0.2");
     expect(out).toContain("max_context = 128000");
     expect(out).toContain('embedding_model = "text-embedding-3-small"');

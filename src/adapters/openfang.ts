@@ -27,8 +27,8 @@ interface OpenFangConfig {
   llm?: {
     temperature?: number;
     max_tokens?: number;
-    // flagged: no canonical equivalent
     top_p?: number;
+    frequency_penalty?: number;
     presence_penalty?: number;
   };
   // OpenFang uses [channels.<type>] keyed sections, parsed as a record
@@ -92,6 +92,7 @@ export const OpenFangAdapter: Adapter = {
       config.agent.temperature !== undefined ||
       config.agent.max_tokens !== undefined ||
       config.agent.top_p !== undefined ||
+      config.agent.frequency_penalty !== undefined ||
       config.agent.presence_penalty !== undefined;
     if (hasLlm) {
       lines.push("");
@@ -102,6 +103,8 @@ export const OpenFangAdapter: Adapter = {
         lines.push(`max_tokens = ${config.agent.max_tokens}`);
       if (config.agent.top_p !== undefined)
         lines.push(`top_p = ${config.agent.top_p}`);
+      if (config.agent.frequency_penalty !== undefined)
+        lines.push(`frequency_penalty = ${config.agent.frequency_penalty}`);
       if (config.agent.presence_penalty !== undefined)
         lines.push(`presence_penalty = ${config.agent.presence_penalty}`);
     }
@@ -248,6 +251,9 @@ export const OpenFangAdapter: Adapter = {
         max_context: agentSrc.max_context,
       }),
       ...(llmSrc.top_p !== undefined && { top_p: llmSrc.top_p }),
+      ...(llmSrc.frequency_penalty !== undefined && {
+        frequency_penalty: llmSrc.frequency_penalty,
+      }),
       ...(llmSrc.presence_penalty !== undefined && {
         presence_penalty: llmSrc.presence_penalty,
       }),
@@ -342,4 +348,3 @@ export const OpenFangAdapter: Adapter = {
 
   writePersona: makeWritePersona("toml", "agent.toml"),
 };
-
