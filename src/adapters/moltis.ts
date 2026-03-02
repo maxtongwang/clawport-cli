@@ -12,7 +12,12 @@ import type {
   UnmappedField,
 } from "../types.js";
 import { makeParsePersona, makeWritePersona } from "../persona.js";
-import { esc, tomlVal, unmappedCanonicalExtras } from "./write-helpers.js";
+import {
+  esc,
+  isBareKey,
+  tomlVal,
+  unmappedCanonicalExtras,
+} from "./write-helpers.js";
 
 interface MoltisConfig {
   agent?: {
@@ -161,7 +166,8 @@ export const MoltisAdapter: Adapter = {
     const chanSrc = config.channels;
     for (const ch of chanSrc) {
       lines.push("");
-      lines.push(`[channels.${ch.type}]`);
+      const typeKey = isBareKey(ch.type) ? ch.type : `"${esc(ch.type)}"`;
+      lines.push(`[channels.${typeKey}]`);
       if (ch.bot_token_env)
         lines.push(`bot_token_env = "${esc(ch.bot_token_env)}"`);
       else if (ch.bot_token) {
@@ -414,4 +420,3 @@ export const MoltisAdapter: Adapter = {
 
   writePersona: makeWritePersona("toml", "agent.toml"),
 };
-

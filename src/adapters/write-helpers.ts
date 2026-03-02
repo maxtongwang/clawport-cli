@@ -3,6 +3,15 @@
 
 import type { CanonicalConfig, UnmappedField } from "../types.js";
 
+/**
+ * Returns true if s is a valid TOML bare key [A-Za-z0-9_-].
+ * Use when interpolating a variable into a TOML table header: [section.${key}].
+ * If false, wrap the key with toml_str() to produce a quoted key.
+ */
+export function isBareKey(s: string): boolean {
+  return /^[A-Za-z0-9_-]+$/.test(s);
+}
+
 /** Escape a string for use inside a TOML double-quoted value. */
 export function esc(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');

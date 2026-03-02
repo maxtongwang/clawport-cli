@@ -11,7 +11,7 @@ import type {
   UnmappedField,
 } from "../types.js";
 import { makeParsePersona, makeWritePersona } from "../persona.js";
-import { esc, tomlVal } from "./write-helpers.js";
+import { esc, isBareKey, tomlVal } from "./write-helpers.js";
 
 // Exact shape of openfang config.toml as of schema_version above.
 // OpenFang uses "provider/model" compound string in agent.model.
@@ -128,7 +128,8 @@ export const OpenFangAdapter: Adapter = {
     // OpenFang uses [channels.<type>] keyed sections
     for (const ch of config.channels) {
       lines.push("");
-      lines.push(`[channels.${ch.type}]`);
+      const typeKey = isBareKey(ch.type) ? ch.type : `"${esc(ch.type)}"`;
+      lines.push(`[channels.${typeKey}]`);
       // OpenFang prefers _env suffix for all token fields
       if (ch.bot_token_env)
         lines.push(`bot_token_env = "${esc(ch.bot_token_env)}"`);
