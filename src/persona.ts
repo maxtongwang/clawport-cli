@@ -62,6 +62,8 @@ export function makeWritePersona(
 }
 
 // Convert agent config content between formats using real parsers.
+// Exhaustive switch on both `from` and `to` — TypeScript will error if
+// AgentConfigFormat gains a new variant without updating this function.
 function convertConfig(
   content: string,
   from: AgentConfigFormat,
@@ -69,10 +71,20 @@ function convertConfig(
 ): string {
   let obj: unknown;
   try {
-    if (from === "yaml") obj = yaml.load(content);
-    else if (from === "toml") obj = TOML.parse(content);
-    else if (from === "env") obj = parseEnvContent(content);
-    else obj = JSON.parse(content);
+    switch (from) {
+      case "yaml":
+        obj = yaml.load(content);
+        break;
+      case "toml":
+        obj = TOML.parse(content);
+        break;
+      case "env":
+        obj = parseEnvContent(content);
+        break;
+      case "json":
+        obj = JSON.parse(content);
+        break;
+    }
   } catch {
     const comment = to === "json" ? "// " : "# ";
     return `${comment}(parse error converting from ${from} to ${to})\n`;
@@ -81,10 +93,16 @@ function convertConfig(
   if (typeof obj !== "object" || obj === null) obj = {};
   const record = obj as Record<string, unknown>;
 
-  if (to === "yaml") return yaml.dump(record);
-  if (to === "json") return JSON.stringify(record, null, 2) + "\n";
-  if (to === "env") return serializeEnvContent(record);
-  return serializeToml(record);
+  switch (to) {
+    case "yaml":
+      return yaml.dump(record);
+    case "json":
+      return JSON.stringify(record, null, 2) + "\n";
+    case "env":
+      return serializeEnvContent(record);
+    case "toml":
+      return serializeToml(record);
+  }
 }
 
 // Parse KEY=VALUE shell env content into a flat object.
