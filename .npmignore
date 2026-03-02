@@ -1,0 +1,7 @@
+src/
+*.ts
+!dist/
+tsconfig.json
+tsup.config.ts
+config.toml
+.github/

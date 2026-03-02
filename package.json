@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Universal porting tool for claw-ecosystem AI agent configurations",
   "bin": {
-    "clawport": "./dist/cli.js"
+    "clawport": "dist/cli.js"
   },
   "scripts": {
     "build": "tsup",
