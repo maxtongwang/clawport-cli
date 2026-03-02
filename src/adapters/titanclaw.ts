@@ -89,12 +89,50 @@ export const TitanClawAdapter: Adapter = {
   write(config: CanonicalConfig): string {
     const lines: string[] = [];
 
-    lines.push("[[agents]]");
-    lines.push(`name = "${esc(config.agent.name)}"`);
-    if (config.agent.system_prompt)
-      lines.push(`system_prompt = "${esc(config.agent.system_prompt)}"`);
+    // Recover full agents array if available from unmapped (roundtrip)
+    const recoveredAgentsEntry = config.unmapped.find(
+      (u) => u.source_path === "agents" && Array.isArray(u.value),
+    );
+    const unmappedRest = config.unmapped.filter(
+      (u) => !(u.source_path === "agents" && Array.isArray(u.value)),
+    );
 
-    lines.push("");
+    if (recoveredAgentsEntry) {
+      for (const [i, a] of (
+        recoveredAgentsEntry.value as Array<Record<string, unknown>>
+      ).entries()) {
+        const entry =
+          i === 0
+            ? {
+                ...a,
+                name: config.agent.name,
+                ...(config.agent.system_prompt !== undefined && {
+                  system_prompt: config.agent.system_prompt,
+                }),
+              }
+            : a;
+        lines.push("[[agents]]");
+        if (entry.id !== undefined)
+          lines.push(`id = "${esc(String(entry.id))}"`);
+        lines.push(`name = "${esc(String(entry.name ?? ""))}"`);
+        if (entry.system_prompt !== undefined)
+          lines.push(`system_prompt = "${esc(String(entry.system_prompt))}"`);
+        if (entry.persona !== undefined)
+          lines.push(`persona = "${esc(String(entry.persona))}"`);
+        if (entry.max_history !== undefined)
+          lines.push(`max_history = ${entry.max_history}`);
+        if (entry.tools !== undefined)
+          lines.push(`tools = ${JSON.stringify(entry.tools)}`);
+        lines.push("");
+      }
+    } else {
+      lines.push("[[agents]]");
+      lines.push(`name = "${esc(config.agent.name)}"`);
+      if (config.agent.system_prompt)
+        lines.push(`system_prompt = "${esc(config.agent.system_prompt)}"`);
+      lines.push("");
+    }
+
     lines.push("[provider]");
     lines.push(`backend = "${esc(config.agent.provider)}"`);
     lines.push(`model = "${esc(config.agent.model)}"`);
@@ -156,10 +194,10 @@ export const TitanClawAdapter: Adapter = {
       lines.push(`enabled = ${s.enabled}`);
     }
 
-    if (config.unmapped.length > 0) {
+    if (unmappedRest.length > 0) {
       lines.push("");
       lines.push("# --- UNMAPPED FIELDS ---");
-      for (const u of config.unmapped)
+      for (const u of unmappedRest)
         lines.push(`# ${u.source_path}: ${u.reason}`);
     }
 
@@ -178,7 +216,7 @@ export const TitanClawAdapter: Adapter = {
     if (agents.length > 1)
       unmapped.push({
         source_path: "agents",
-        value: agents.slice(1).map((a) => a.id ?? a.name ?? "unnamed"),
+        value: agents,
         reason: "multi-agent array — only first agent exported",
       });
 

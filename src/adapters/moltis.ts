@@ -91,15 +91,60 @@ export const MoltisAdapter: Adapter = {
     if (config.agent.system_prompt)
       lines.push(`system_prompt = "${esc(config.agent.system_prompt)}"`);
 
-    lines.push("");
-    lines.push("[[providers]]");
-    lines.push(`name = "${esc(config.agent.provider)}"`);
-    lines.push(`model = "${esc(config.agent.model)}"`);
-    lines.push(`priority = 1`);
-    if (config.agent.temperature !== undefined)
-      lines.push(`temperature = ${config.agent.temperature}`);
-    if (config.agent.max_tokens !== undefined)
-      lines.push(`max_tokens = ${config.agent.max_tokens}`);
+    // Recover full providers array if available from unmapped (roundtrip)
+    const recoveredProvidersEntry = config.unmapped.find(
+      (u) => u.source_path === "providers" && Array.isArray(u.value),
+    );
+    const unmappedRest = config.unmapped.filter(
+      (u) => !(u.source_path === "providers" && Array.isArray(u.value)),
+    );
+
+    if (recoveredProvidersEntry) {
+      for (const [i, p] of (
+        recoveredProvidersEntry.value as Array<Record<string, unknown>>
+      ).entries()) {
+        const entry =
+          i === 0
+            ? {
+                ...p,
+                name: config.agent.provider,
+                model: config.agent.model,
+                ...(config.agent.temperature !== undefined && {
+                  temperature: config.agent.temperature,
+                }),
+                ...(config.agent.max_tokens !== undefined && {
+                  max_tokens: config.agent.max_tokens,
+                }),
+              }
+            : p;
+        lines.push("");
+        lines.push("[[providers]]");
+        lines.push(`name = "${esc(String(entry.name ?? ""))}"`);
+        lines.push(`model = "${esc(String(entry.model ?? ""))}"`);
+        if (entry.priority !== undefined)
+          lines.push(`priority = ${entry.priority}`);
+        if (entry.temperature !== undefined)
+          lines.push(`temperature = ${entry.temperature}`);
+        if (entry.max_tokens !== undefined)
+          lines.push(`max_tokens = ${entry.max_tokens}`);
+        if (entry.api_key_env !== undefined)
+          lines.push(`api_key_env = "${esc(String(entry.api_key_env))}"`);
+        if (entry.fallback_on_error !== undefined)
+          lines.push(`fallback_on_error = ${entry.fallback_on_error}`);
+        if (entry.timeout_ms !== undefined)
+          lines.push(`timeout_ms = ${entry.timeout_ms}`);
+      }
+    } else {
+      lines.push("");
+      lines.push("[[providers]]");
+      lines.push(`name = "${esc(config.agent.provider)}"`);
+      lines.push(`model = "${esc(config.agent.model)}"`);
+      lines.push(`priority = 1`);
+      if (config.agent.temperature !== undefined)
+        lines.push(`temperature = ${config.agent.temperature}`);
+      if (config.agent.max_tokens !== undefined)
+        lines.push(`max_tokens = ${config.agent.max_tokens}`);
+    }
 
     if (config.memory) {
       lines.push("");
@@ -149,10 +194,10 @@ export const MoltisAdapter: Adapter = {
         lines.push(`${k} = ${tomlVal(v)}`);
     }
 
-    if (config.unmapped.length > 0) {
+    if (unmappedRest.length > 0) {
       lines.push("");
       lines.push("# --- UNMAPPED FIELDS ---");
-      for (const u of config.unmapped)
+      for (const u of unmappedRest)
         lines.push(`# ${u.source_path}: ${u.reason}`);
     }
 
@@ -196,11 +241,11 @@ export const MoltisAdapter: Adapter = {
     );
     const primary = sortedProviders[0];
 
-    // Flag non-primary providers
+    // Flag non-primary providers — store full array for roundtrip recovery
     if (sortedProviders.length > 1) {
       unmapped.push({
         source_path: "providers",
-        value: sortedProviders.slice(1).map((p) => `${p.name}/${p.model}`),
+        value: sortedProviders,
         reason:
           "multi-provider fallback chain — only primary provider exported",
       });

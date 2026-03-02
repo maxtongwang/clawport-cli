@@ -56,6 +56,44 @@ export const FreeclawAdapter: Adapter = {
   defaultOutputFile: "config.json",
 
   write(config: CanonicalConfig): string {
+    // Recover full providers array if available from unmapped (roundtrip)
+    const recoveredProvidersEntry = config.unmapped.find(
+      (u) => u.source_path === "providers" && Array.isArray(u.value),
+    );
+    const unmappedRest = config.unmapped.filter(
+      (u) => !(u.source_path === "providers" && Array.isArray(u.value)),
+    );
+
+    const providers = recoveredProvidersEntry
+      ? (recoveredProvidersEntry.value as Array<Record<string, unknown>>).map(
+          (p, i) =>
+            i === 0
+              ? {
+                  ...p,
+                  name: config.agent.provider,
+                  model: config.agent.model,
+                  ...(config.agent.temperature !== undefined && {
+                    temperature: config.agent.temperature,
+                  }),
+                  ...(config.agent.max_tokens !== undefined && {
+                    max_tokens: config.agent.max_tokens,
+                  }),
+                }
+              : p,
+        )
+      : [
+          {
+            name: config.agent.provider,
+            model: config.agent.model,
+            ...(config.agent.temperature !== undefined && {
+              temperature: config.agent.temperature,
+            }),
+            ...(config.agent.max_tokens !== undefined && {
+              max_tokens: config.agent.max_tokens,
+            }),
+          },
+        ];
+
     const out: Record<string, unknown> = {
       agent: {
         name: config.agent.name,
@@ -63,18 +101,7 @@ export const FreeclawAdapter: Adapter = {
           system_prompt: config.agent.system_prompt,
         }),
       },
-      providers: [
-        {
-          name: config.agent.provider,
-          model: config.agent.model,
-          ...(config.agent.temperature !== undefined && {
-            temperature: config.agent.temperature,
-          }),
-          ...(config.agent.max_tokens !== undefined && {
-            max_tokens: config.agent.max_tokens,
-          }),
-        },
-      ],
+      providers,
     };
 
     if (config.channels.length > 0) {
@@ -94,8 +121,8 @@ export const FreeclawAdapter: Adapter = {
 
     if (config.memory?.path) out.data_dir = config.memory.path;
 
-    if (config.unmapped.length > 0) {
-      out._clawport_unmapped = config.unmapped.map(
+    if (unmappedRest.length > 0) {
+      out._clawport_unmapped = unmappedRest.map(
         (u) => `${u.source_path}: ${u.reason}`,
       );
     }
@@ -126,7 +153,7 @@ export const FreeclawAdapter: Adapter = {
     if (providers.length > 1)
       unmapped.push({
         source_path: "providers",
-        value: providers.slice(1).map((p) => `${p.name}/${p.model}`),
+        value: providers,
         reason: "multi-provider fallback list — only primary exported",
       });
     if (primary.api_key_env !== undefined)

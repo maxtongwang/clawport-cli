@@ -51,9 +51,48 @@ export const TinyClawAdapter: Adapter = {
   defaultOutputFile: "settings.json",
 
   write(config: CanonicalConfig): string {
-    const out: Record<string, unknown> = {
-      workspace: { name: config.agent.name },
-      agents: {
+    // Recover full agents map if available from unmapped (roundtrip)
+    const recoveredAgentsEntry = config.unmapped.find(
+      (u) =>
+        u.source_path === "agents" &&
+        typeof u.value === "object" &&
+        u.value !== null &&
+        !Array.isArray(u.value),
+    );
+    const unmappedRest = config.unmapped.filter(
+      (u) =>
+        !(
+          u.source_path === "agents" &&
+          typeof u.value === "object" &&
+          u.value !== null &&
+          !Array.isArray(u.value)
+        ),
+    );
+
+    let agentsMap: Record<string, unknown>;
+    if (recoveredAgentsEntry) {
+      const recovered = recoveredAgentsEntry.value as Record<string, unknown>;
+      const firstKey = Object.keys(recovered)[0] ?? "default";
+      agentsMap = {
+        ...recovered,
+        [firstKey]: {
+          ...(recovered[firstKey] as Record<string, unknown>),
+          name: config.agent.name,
+          provider: config.agent.provider,
+          model: config.agent.model,
+          ...(config.agent.system_prompt !== undefined && {
+            system_prompt: config.agent.system_prompt,
+          }),
+          ...(config.agent.temperature !== undefined && {
+            temperature: config.agent.temperature,
+          }),
+          ...(config.agent.max_tokens !== undefined && {
+            max_tokens: config.agent.max_tokens,
+          }),
+        },
+      };
+    } else {
+      agentsMap = {
         default: {
           name: config.agent.name,
           provider: config.agent.provider,
@@ -68,7 +107,12 @@ export const TinyClawAdapter: Adapter = {
             max_tokens: config.agent.max_tokens,
           }),
         },
-      },
+      };
+    }
+
+    const out: Record<string, unknown> = {
+      workspace: { name: config.agent.name },
+      agents: agentsMap,
     };
 
     if (config.channels.length > 0) {
@@ -92,8 +136,8 @@ export const TinyClawAdapter: Adapter = {
       (out.workspace as Record<string, unknown>).path = config.memory.path;
     }
 
-    if (config.unmapped.length > 0) {
-      out._clawport_unmapped = config.unmapped.map(
+    if (unmappedRest.length > 0) {
+      out._clawport_unmapped = unmappedRest.map(
         (u) => `${u.source_path}: ${u.reason}`,
       );
     }
@@ -130,7 +174,7 @@ export const TinyClawAdapter: Adapter = {
     if (agentEntries.length > 1)
       unmapped.push({
         source_path: "agents",
-        value: agentEntries.slice(1).map(([id]) => id),
+        value: Object.fromEntries(agentEntries),
         reason: "multi-agent map — only first agent exported",
       });
 
