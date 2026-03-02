@@ -10,6 +10,7 @@ import type {
   CanonicalConfig,
   UnmappedField,
 } from "../types.js";
+import { makeParsePersona, makeWritePersona } from "../persona.js";
 
 // Exact shape of openfang config.toml as of schema_version above.
 // OpenFang uses "provider/model" compound string in agent.model.
@@ -67,6 +68,8 @@ export const OpenFangAdapter: Adapter = {
   schemaVersion: "0.3.1",
   configPatterns: ["config.toml", ".openfang/config.toml"],
   defaultOutputFile: "config.toml",
+  // OpenFang uses noun-first canonical skill names natively
+  canonicalSkillNames: true,
 
   write(config: CanonicalConfig): string {
     const lines: string[] = [];
@@ -341,6 +344,10 @@ export const OpenFangAdapter: Adapter = {
       config: { agent, channels, memory, skills, unmapped },
     };
   },
+
+  parsePersona: makeParsePersona("toml", "agent.toml"),
+
+  writePersona: makeWritePersona("toml", "agent.toml"),
 };
 
 function esc(s: string): string {

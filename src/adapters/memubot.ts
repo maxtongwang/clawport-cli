@@ -11,6 +11,7 @@ import type {
   CanonicalConfig,
   UnmappedField,
 } from "../types.js";
+import { makeParsePersona, makeWritePersona } from "../persona.js";
 
 interface MemuBotConfig {
   agent?: {
@@ -292,4 +293,8 @@ export const MemuBotAdapter: Adapter = {
       config: { agent, channels, memory, skills, unmapped },
     };
   },
+
+  parsePersona: makeParsePersona("json", "agent.json"),
+
+  writePersona: makeWritePersona("json", "agent.json"),
 };

@@ -10,6 +10,7 @@ import type {
   CanonicalConfig,
   UnmappedField,
 } from "../types.js";
+import { makeParsePersona, makeWritePersona } from "../persona.js";
 
 // Exact shape of zeroclaw config.toml as of schema_version above
 interface ZeroClawConfig {
@@ -317,6 +318,10 @@ export const ZeroClawAdapter: Adapter = {
       config: { agent, channels, memory, skills, unmapped },
     };
   },
+
+  parsePersona: makeParsePersona("toml", "agent.toml"),
+
+  writePersona: makeWritePersona("toml", "agent.toml"),
 };
 
 function esc(s: string): string {

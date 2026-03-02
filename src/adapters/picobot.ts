@@ -11,6 +11,7 @@ import type {
   CanonicalConfig,
   UnmappedField,
 } from "../types.js";
+import { makeParsePersona, makeWritePersona } from "../persona.js";
 
 interface PicobotConfig {
   name?: string;
@@ -151,4 +152,8 @@ export const PicobotAdapter: Adapter = {
       config: { agent, channels, memory: undefined, skills: [], unmapped },
     };
   },
+
+  parsePersona: makeParsePersona("json", "agent.json"),
+
+  writePersona: makeWritePersona("json", "agent.json"),
 };

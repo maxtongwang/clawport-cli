@@ -11,6 +11,7 @@ import type {
   CanonicalConfig,
   UnmappedField,
 } from "../types.js";
+import { makeParsePersona, makeWritePersona } from "../persona.js";
 
 interface NanobotConfig {
   llm?: {
@@ -282,4 +283,8 @@ export const NanobotAdapter: Adapter = {
       config: { agent, channels, memory, skills: [], unmapped },
     };
   },
+
+  parsePersona: makeParsePersona("json", "agent.json"),
+
+  writePersona: makeWritePersona("json", "agent.json"),
 };

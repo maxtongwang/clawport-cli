@@ -11,6 +11,7 @@ import type {
   CanonicalConfig,
   UnmappedField,
 } from "../types.js";
+import { makeParsePersona, makeWritePersona } from "../persona.js";
 
 interface N8nClawConfig {
   agent?: {
@@ -235,4 +236,8 @@ export const N8nClawAdapter: Adapter = {
       config: { agent, channels, memory, skills, unmapped },
     };
   },
+
+  parsePersona: makeParsePersona("json", "agent.json"),
+
+  writePersona: makeWritePersona("json", "agent.json"),
 };

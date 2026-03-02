@@ -11,6 +11,7 @@ import type {
   CanonicalConfig,
   UnmappedField,
 } from "../types.js";
+import { makeParsePersona, makeWritePersona } from "../persona.js";
 
 interface OuroborosConfig {
   agent?: {
@@ -241,4 +242,8 @@ export const OuroborosAdapter: Adapter = {
       config: { agent, channels, memory, skills: [], unmapped },
     };
   },
+
+  parsePersona: makeParsePersona("json", "agent.json"),
+
+  writePersona: makeWritePersona("json", "agent.json"),
 };

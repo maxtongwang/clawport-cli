@@ -79,6 +79,19 @@ export type AdapterResult =
   | { ok: true; config: CanonicalConfig }
   | { ok: false; error: string };
 
+// A single file emitted by writePersona (filename + raw content)
+export interface PersonaFile {
+  filename: string; // e.g. "MEMORY.md", "agent.yaml"
+  content: string;
+}
+
+// Agent persona data parsed from a persona directory
+export interface AgentPersona {
+  memory?: string; // raw MEMORY.md content
+  agent_config?: string; // raw agent.yaml/toml content
+  agent_config_format?: "yaml" | "toml" | "json";
+}
+
 // Identifies a source directory as a specific claw clone
 export interface CloneFingerprint {
   name: string; // e.g. "openclaw", "zeroclaw"
@@ -103,4 +116,11 @@ export interface Adapter {
   parse(configPath: string, raw: unknown): AdapterResult;
   // Write canonical form → this clone's native config format (string)
   write(config: CanonicalConfig): string;
+  // When true, this adapter uses canonical (noun-first) skill names natively.
+  // cli.ts skips denormalizeSkillName before write() for these adapters.
+  readonly canonicalSkillNames?: boolean;
+  // Optional: parse persona files (MEMORY.md, agent.yaml/toml) from agentDir
+  parsePersona?(agentDir: string): AgentPersona | undefined;
+  // Optional: emit persona files for this clone's format
+  writePersona?(persona: AgentPersona): PersonaFile[];
 }

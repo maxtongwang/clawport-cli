@@ -11,6 +11,7 @@ import type {
   CanonicalConfig,
   UnmappedField,
 } from "../types.js";
+import { makeParsePersona, makeWritePersona } from "../persona.js";
 
 // Exact shape of openclaw config.yaml as of schema_version above
 interface OpenClawConfig {
@@ -310,4 +311,8 @@ export const OpenClawAdapter: Adapter = {
       config: { agent, channels, memory, skills, unmapped },
     };
   },
+
+  parsePersona: makeParsePersona("yaml", "agent.yaml"),
+
+  writePersona: makeWritePersona("yaml", "agent.yaml"),
 };

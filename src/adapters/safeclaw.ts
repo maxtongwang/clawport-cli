@@ -12,6 +12,7 @@ import type {
   CanonicalConfig,
   UnmappedField,
 } from "../types.js";
+import { makeParsePersona, makeWritePersona } from "../persona.js";
 
 interface SafeClawConfig {
   llm?: {
@@ -308,4 +309,8 @@ export const SafeClawAdapter: Adapter = {
       config: { agent, channels, memory, skills: [], unmapped },
     };
   },
+
+  parsePersona: makeParsePersona("json", "agent.json"),
+
+  writePersona: makeWritePersona("json", "agent.json"),
 };

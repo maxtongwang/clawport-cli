@@ -12,6 +12,7 @@ import type {
   CanonicalConfig,
   UnmappedField,
 } from "../types.js";
+import { makeParsePersona, makeWritePersona } from "../persona.js";
 
 interface AionUiConfig {
   agent?: {
@@ -237,4 +238,8 @@ export const AionUiAdapter: Adapter = {
       config: { agent, channels, memory, skills: [], unmapped },
     };
   },
+
+  parsePersona: makeParsePersona("json", "agent.json"),
+
+  writePersona: makeWritePersona("json", "agent.json"),
 };

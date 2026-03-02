@@ -2,8 +2,16 @@
 // Each test: parse a minimal valid config → verify canonical fields →
 // write back → verify output contains expected strings.
 
+import fs from "fs";
+import os from "os";
+import path from "path";
 import { describe, it, expect } from "vitest";
 import { ADAPTERS, getAdapter } from "../adapters/index.js";
+import {
+  SKILL_ALIASES,
+  normalizeSkillName,
+  denormalizeSkillName,
+} from "../skills.js";
 
 const MINIMAL_CANONICAL = {
   agent: {
@@ -434,4 +442,156 @@ describe("write → parse roundtrip", () => {
       expect(result.config.agent.model).toContain("claude-sonnet-4-6");
     });
   }
+});
+
+// ── Skill name normalization tests ───────────────────────────────────────────
+
+describe("normalizeSkillName / denormalizeSkillName", () => {
+  it("normalizes all listed aliases to canonical names", () => {
+    for (const [src, canonical] of Object.entries(SKILL_ALIASES)) {
+      expect(normalizeSkillName(src)).toBe(canonical);
+    }
+  });
+
+  it("denormalizes all canonical names back to source names", () => {
+    for (const [src, canonical] of Object.entries(SKILL_ALIASES)) {
+      expect(denormalizeSkillName(canonical)).toBe(src);
+    }
+  });
+
+  it("normalize then denormalize is identity for all aliases", () => {
+    for (const src of Object.keys(SKILL_ALIASES)) {
+      expect(denormalizeSkillName(normalizeSkillName(src))).toBe(src);
+    }
+  });
+
+  it("passes through unknown skill names unchanged", () => {
+    expect(normalizeSkillName("custom_skill")).toBe("custom_skill");
+    expect(denormalizeSkillName("custom_skill")).toBe("custom_skill");
+  });
+
+  it("normalizes read_file to file_read", () => {
+    expect(normalizeSkillName("read_file")).toBe("file_read");
+  });
+
+  it("denormalizes web_search to search_web", () => {
+    expect(denormalizeSkillName("web_search")).toBe("search_web");
+  });
+});
+
+// ── Persona migration tests ───────────────────────────────────────────────────
+
+describe("openclaw parsePersona", () => {
+  it("reads MEMORY.md and agent.yaml from fixture dir", () => {
+    const adapter = getAdapter("openclaw")!;
+    expect(adapter.parsePersona).toBeDefined();
+
+    // Create a temp persona dir with fixture files
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawport-test-"));
+    fs.writeFileSync(
+      path.join(tmpDir, "MEMORY.md"),
+      "# Memory\nSome memory content.",
+    );
+    fs.writeFileSync(
+      path.join(tmpDir, "agent.yaml"),
+      'name: "test-agent"\nversion: "1.0"',
+    );
+
+    const persona = adapter.parsePersona!(tmpDir);
+    expect(persona).toBeDefined();
+    expect(persona!.memory).toContain("Some memory content.");
+    expect(persona!.agent_config).toContain("test-agent");
+    expect(persona!.agent_config_format).toBe("yaml");
+
+    // Cleanup
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  it("returns undefined when persona dir has no recognized files", () => {
+    const adapter = getAdapter("openclaw")!;
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawport-test-"));
+    fs.writeFileSync(path.join(tmpDir, "unrelated.txt"), "nothing");
+
+    const persona = adapter.parsePersona!(tmpDir);
+    expect(persona).toBeUndefined();
+
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+});
+
+describe("openfang writePersona", () => {
+  it("returns MEMORY.md and agent.toml files", () => {
+    const adapter = getAdapter("openfang")!;
+    expect(adapter.writePersona).toBeDefined();
+
+    const persona = {
+      memory: "# Memory\nAgent memory.",
+      agent_config: 'name: "my-agent"\nversion: "2.0"',
+      agent_config_format: "yaml" as const,
+    };
+
+    const files = adapter.writePersona!(persona);
+    expect(files).toHaveLength(2);
+
+    const memFile = files.find((f) => f.filename === "MEMORY.md");
+    const configFile = files.find((f) => f.filename === "agent.toml");
+
+    expect(memFile).toBeDefined();
+    expect(memFile!.content).toContain("Agent memory.");
+
+    expect(configFile).toBeDefined();
+    // YAML was converted to TOML key=value format
+    expect(configFile!.content).toContain("my-agent");
+  });
+
+  it("preserves toml content unchanged when format is already toml", () => {
+    const adapter = getAdapter("openfang")!;
+    const tomlContent = 'name = "toml-agent"\nversion = "3.0"\n';
+    const files = adapter.writePersona!({
+      agent_config: tomlContent,
+      agent_config_format: "toml",
+    });
+    const configFile = files.find((f) => f.filename === "agent.toml");
+    expect(configFile!.content).toBe(tomlContent);
+  });
+});
+
+describe("skill normalization in export pipeline", () => {
+  it("openclaw→openfang: normalizes read_file to file_read", () => {
+    // Simulate the normalize step done in cli.ts
+    const ocSkills = [{ name: "read_file", enabled: true }];
+    const normalized = ocSkills.map((s) => ({
+      ...s,
+      name: normalizeSkillName(s.name),
+    }));
+    expect(normalized[0].name).toBe("file_read");
+
+    // Verify openfang write() uses the normalized name
+    const target = getAdapter("openfang")!;
+    const config = {
+      ...MINIMAL_CANONICAL,
+      skills: normalized,
+    };
+    const output = target.write(config);
+    expect(output).toContain("file_read");
+  });
+
+  it("openfang→openclaw: denormalizes file_read back to read_file", () => {
+    // After normalize (file_read), denormalize for openclaw target
+    const canonicalSkills = [{ name: "file_read", enabled: true }];
+    const denormalized = canonicalSkills.map((s) => ({
+      ...s,
+      name: denormalizeSkillName(s.name),
+    }));
+    expect(denormalized[0].name).toBe("read_file");
+
+    // Verify openclaw write() uses the denormalized name
+    const target = getAdapter("openclaw")!;
+    const config = {
+      ...MINIMAL_CANONICAL,
+      skills: denormalized,
+    };
+    const output = target.write(config);
+    expect(output).toContain("read_file");
+  });
 });

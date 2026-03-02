@@ -12,6 +12,7 @@ import type {
   CanonicalConfig,
   UnmappedField,
 } from "../types.js";
+import { makeParsePersona, makeWritePersona } from "../persona.js";
 
 interface LightClawConfig {
   agent?: {
@@ -260,6 +261,10 @@ export const LightClawAdapter: Adapter = {
       config: { agent, channels, memory, skills, unmapped },
     };
   },
+
+  parsePersona: makeParsePersona("toml", "agent.toml"),
+
+  writePersona: makeWritePersona("toml", "agent.toml"),
 };
 
 function esc(s: string): string {
