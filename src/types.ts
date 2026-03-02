@@ -12,12 +12,40 @@ export interface CanonicalAgent {
 
 export interface CanonicalChannel {
   type: string; // e.g. "discord", "telegram", "slack"
-  bot_token_env?: string; // env var name holding the token
+
+  // --- Auth tokens (different platforms use different naming) ---
+  bot_token_env?: string; // Discord, Telegram, Slack, Mattermost, Rocket.Chat, Guilded...
   bot_token?: string; // literal token (warn: exposed)
-  guild_id?: string; // discord-specific
-  chat_id?: string; // telegram-specific
-  workspace?: string; // slack-specific
-  extra: Record<string, unknown>; // channel-specific fields preserved verbatim
+  access_token_env?: string; // WhatsApp Cloud API, Matrix, Mastodon, Bluesky, LinkedIn...
+  access_token?: string; // literal access token (warn: exposed)
+  app_token_env?: string; // Slack Socket Mode (required alongside bot_token_env)
+  password_env?: string; // Email (IMAP/SMTP), XMPP
+
+  // --- Connection (self-hosted / federated platforms) ---
+  server_url?: string; // Mattermost, Rocket.Chat, Matrix homeserver, Nextcloud, XMPP
+  imap_host?: string; // Email inbound
+  imap_port?: number;
+  smtp_host?: string; // Email outbound
+  smtp_port?: number;
+  from_address?: string; // Email sender address
+
+  // --- Addressing ---
+  guild_id?: string; // Discord server ID
+  chat_id?: string; // Telegram chat/group ID
+  workspace?: string; // Slack workspace
+  room_id?: string; // Matrix room, IRC channel, Rocket.Chat room
+  channel_id?: string; // Generic channel/room identifier
+  phone_number?: string; // WhatsApp, Signal (E.164 format)
+  signal_cli_path?: string; // Signal — path to signal-cli binary
+
+  // --- Notification-only (outbound, no inbound) ---
+  webhook_url?: string; // ntfy, Gotify push endpoints
+
+  // --- Per-channel agent overrides (flagged on parse, preserved on write) ---
+  // Not part of canonical — adapters flag these as unmapped.
+
+  // --- Catch-all for platform-specific fields not in canonical schema ---
+  extra: Record<string, unknown>;
 }
 
 export interface CanonicalMemory {

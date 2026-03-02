@@ -100,9 +100,38 @@ export const OpenClawAdapter: Adapter = {
           ...(ch.bot_token_env !== undefined && {
             bot_token: `\${${ch.bot_token_env}}`,
           }),
+          ...(ch.access_token !== undefined && {
+            access_token: ch.access_token,
+          }),
+          ...(ch.access_token_env !== undefined && {
+            access_token: `\${${ch.access_token_env}}`,
+          }),
+          ...(ch.app_token_env !== undefined && {
+            app_token: `\${${ch.app_token_env}}`,
+          }),
+          ...(ch.password_env !== undefined && {
+            password: `\${${ch.password_env}}`,
+          }),
+          ...(ch.server_url !== undefined && { server_url: ch.server_url }),
+          ...(ch.phone_number !== undefined && {
+            phone_number: ch.phone_number,
+          }),
+          ...(ch.signal_cli_path !== undefined && {
+            signal_cli_path: ch.signal_cli_path,
+          }),
           ...(ch.guild_id !== undefined && { guild_id: ch.guild_id }),
           ...(ch.chat_id !== undefined && { chat_id: ch.chat_id }),
           ...(ch.workspace !== undefined && { workspace: ch.workspace }),
+          ...(ch.room_id !== undefined && { room_id: ch.room_id }),
+          ...(ch.channel_id !== undefined && { channel_id: ch.channel_id }),
+          ...(ch.imap_host !== undefined && { imap_host: ch.imap_host }),
+          ...(ch.imap_port !== undefined && { imap_port: ch.imap_port }),
+          ...(ch.smtp_host !== undefined && { smtp_host: ch.smtp_host }),
+          ...(ch.smtp_port !== undefined && { smtp_port: ch.smtp_port }),
+          ...(ch.from_address !== undefined && {
+            from_address: ch.from_address,
+          }),
+          ...(ch.webhook_url !== undefined && { webhook_url: ch.webhook_url }),
           ...ch.extra,
         };
       }
@@ -232,17 +261,14 @@ export const OpenClawAdapter: Adapter = {
     }
     if (chanSrc.slack) {
       const s = chanSrc.slack;
-      if (s.app_token !== undefined) {
-        unmapped.push({
-          source_path: "channels.slack.app_token",
-          value: s.app_token,
-          reason: "no canonical equivalent",
-        });
-      }
+      // app_token now maps to canonical app_token_env (Slack Socket Mode)
       channels.push({
         type: "slack",
         bot_token: s.bot_token,
         workspace: s.workspace,
+        ...(s.app_token !== undefined && {
+          app_token_env: s.app_token as string,
+        }),
         extra: {},
       });
     }
@@ -260,17 +286,18 @@ export const OpenClawAdapter: Adapter = {
 
     // --- memory block ---
     const memSrc = src.memory;
-    const memory = memSrc
-      ? {
-          backend:
-            memSrc.backend === "sqlite" ||
-            memSrc.backend === "file" ||
-            memSrc.backend === "postgres"
-              ? memSrc.backend
-              : ("file" as const),
-          ...(memSrc.path !== undefined && { path: memSrc.path }),
-        }
-      : undefined;
+    let memory:
+      | { backend: "sqlite" | "file" | "postgres" | "unknown"; path?: string }
+      | undefined;
+    if (memSrc) {
+      const b = memSrc.backend;
+      const backend: "sqlite" | "file" | "postgres" | "unknown" =
+        b === "sqlite" || b === "file" || b === "postgres" ? b : "file";
+      memory = {
+        backend,
+        ...(memSrc.path !== undefined && { path: memSrc.path }),
+      };
+    }
 
     // --- skills block ---
     const skills = (src.skills ?? []).map((s) => {

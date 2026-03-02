@@ -110,9 +110,29 @@ export const ZeroClawAdapter: Adapter = {
       lines.push(`type = "${esc(ch.type)}"`);
       if (ch.bot_token) lines.push(`bot_token = "${esc(ch.bot_token)}"`);
       if (ch.bot_token_env) lines.push(`bot_token = "\${${ch.bot_token_env}}"`);
+      if (ch.access_token)
+        lines.push(`access_token = "${esc(ch.access_token)}"`);
+      if (ch.access_token_env)
+        lines.push(`access_token = "\${${ch.access_token_env}}"`);
+      if (ch.app_token_env) lines.push(`app_token = "\${${ch.app_token_env}}"`);
+      if (ch.password_env) lines.push(`password = "\${${ch.password_env}}"`);
+      if (ch.server_url) lines.push(`server_url = "${esc(ch.server_url)}"`);
+      if (ch.phone_number)
+        lines.push(`phone_number = "${esc(ch.phone_number)}"`);
+      if (ch.signal_cli_path)
+        lines.push(`signal_cli_path = "${esc(ch.signal_cli_path)}"`);
       if (ch.guild_id) lines.push(`guild_id = "${esc(ch.guild_id)}"`);
       if (ch.chat_id) lines.push(`chat_id = "${esc(ch.chat_id)}"`);
       if (ch.workspace) lines.push(`workspace = "${esc(ch.workspace)}"`);
+      if (ch.room_id) lines.push(`room_id = "${esc(ch.room_id)}"`);
+      if (ch.channel_id) lines.push(`channel_id = "${esc(ch.channel_id)}"`);
+      if (ch.imap_host) lines.push(`imap_host = "${esc(ch.imap_host)}"`);
+      if (ch.imap_port) lines.push(`imap_port = ${ch.imap_port}`);
+      if (ch.smtp_host) lines.push(`smtp_host = "${esc(ch.smtp_host)}"`);
+      if (ch.smtp_port) lines.push(`smtp_port = ${ch.smtp_port}`);
+      if (ch.from_address)
+        lines.push(`from_address = "${esc(ch.from_address)}"`);
+      if (ch.webhook_url) lines.push(`webhook_url = "${esc(ch.webhook_url)}"`);
       for (const [k, v] of Object.entries(ch.extra)) {
         lines.push(`${k} = ${tomlVal(v)}`);
       }

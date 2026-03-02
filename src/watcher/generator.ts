@@ -6,14 +6,13 @@
 
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 import { extractRustSchema } from "../extractors/rust.js";
 import { extractTsSchema } from "../extractors/typescript.js";
 import { extractPySchema } from "../extractors/python.js";
 import { extractGoSchema } from "../extractors/go.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ADAPTERS_DIR = path.resolve(__dirname, "../../src/adapters");
+// __dirname is available in CJS — no import.meta needed
+const ADAPTERS_DIR = path.resolve(__dirname, "../adapters");
 
 export interface GeneratorInput {
   repoUrl: string;

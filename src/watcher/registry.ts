@@ -6,13 +6,13 @@
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 import { generateAdapter } from "./generator.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// __dirname is available in CJS — no import.meta needed
 const REGISTRY_OWNER = "naturalmoods";
 const REGISTRY_REPO = "clawclones-registry";
 const STATE_FILE = path.resolve(__dirname, "../../.watcher-state.json");
+// Note: __dirname here is src/watcher/ at runtime (tsx) or dist/watcher/ after build
 
 interface WatcherState {
   // Maps issue number → last seen GitHub repo URL + head commit
