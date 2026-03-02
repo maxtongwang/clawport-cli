@@ -89,7 +89,7 @@ export interface PersonaFile {
 export interface AgentPersona {
   memory?: string; // raw MEMORY.md content
   agent_config?: string; // raw agent.yaml/toml content
-  agent_config_format?: "yaml" | "toml" | "json";
+  agent_config_format?: "yaml" | "toml" | "json" | "env";
 }
 
 // Identifies a source directory as a specific claw clone
