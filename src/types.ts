@@ -8,6 +8,10 @@ export interface CanonicalAgent {
   system_prompt?: string;
   temperature?: number;
   max_tokens?: number;
+  max_context?: number; // input context window (distinct from output max_tokens)
+  top_p?: number; // nucleus sampling
+  frequency_penalty?: number; // repetition frequency penalty
+  presence_penalty?: number; // repetition presence penalty
 }
 
 export interface CanonicalChannel {
@@ -52,6 +56,8 @@ export interface CanonicalMemory {
   backend: "sqlite" | "file" | "postgres" | "unknown";
   path?: string;
   connection_string?: string;
+  embedding_model?: string; // RAG embedding model name
+  vector_dims?: number; // embedding vector dimensions
 }
 
 export interface CanonicalSkill {

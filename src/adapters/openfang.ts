@@ -84,10 +84,14 @@ export const OpenFangAdapter: Adapter = {
     if (config.agent.system_prompt !== undefined) {
       lines.push(`system_prompt = "${esc(config.agent.system_prompt)}"`);
     }
+    if (config.agent.max_context !== undefined)
+      lines.push(`max_context = ${config.agent.max_context}`);
 
     const hasLlm =
       config.agent.temperature !== undefined ||
-      config.agent.max_tokens !== undefined;
+      config.agent.max_tokens !== undefined ||
+      config.agent.top_p !== undefined ||
+      config.agent.presence_penalty !== undefined;
     if (hasLlm) {
       lines.push("");
       lines.push("[llm]");
@@ -95,6 +99,10 @@ export const OpenFangAdapter: Adapter = {
         lines.push(`temperature = ${config.agent.temperature}`);
       if (config.agent.max_tokens !== undefined)
         lines.push(`max_tokens = ${config.agent.max_tokens}`);
+      if (config.agent.top_p !== undefined)
+        lines.push(`top_p = ${config.agent.top_p}`);
+      if (config.agent.presence_penalty !== undefined)
+        lines.push(`presence_penalty = ${config.agent.presence_penalty}`);
     }
 
     if (config.memory) {
@@ -107,6 +115,10 @@ export const OpenFangAdapter: Adapter = {
           `connection_string = "${esc(config.memory.connection_string)}"`,
         );
       }
+      if (config.memory.embedding_model)
+        lines.push(`embedding_model = "${esc(config.memory.embedding_model)}"`);
+      if (config.memory.vector_dims !== undefined)
+        lines.push(`vector_dims = ${config.memory.vector_dims}`);
     }
 
     // OpenFang uses [channels.<type>] keyed sections
@@ -191,32 +203,11 @@ export const OpenFangAdapter: Adapter = {
       model = model.slice(slash + 1);
     }
 
-    if (agentSrc.max_context !== undefined) {
-      unmapped.push({
-        source_path: "agent.max_context",
-        value: agentSrc.max_context,
-        reason: "no canonical equivalent",
-      });
-    }
     if (agentSrc.tools !== undefined) {
       unmapped.push({
         source_path: "agent.tools",
         value: agentSrc.tools,
         reason: "no canonical equivalent — use skills[]",
-      });
-    }
-    if (llmSrc.top_p !== undefined) {
-      unmapped.push({
-        source_path: "llm.top_p",
-        value: llmSrc.top_p,
-        reason: "no canonical equivalent",
-      });
-    }
-    if (llmSrc.presence_penalty !== undefined) {
-      unmapped.push({
-        source_path: "llm.presence_penalty",
-        value: llmSrc.presence_penalty,
-        reason: "no canonical equivalent",
       });
     }
     if (src.telemetry !== undefined) {
@@ -252,6 +243,13 @@ export const OpenFangAdapter: Adapter = {
         temperature: llmSrc.temperature,
       }),
       ...(llmSrc.max_tokens !== undefined && { max_tokens: llmSrc.max_tokens }),
+      ...(agentSrc.max_context !== undefined && {
+        max_context: agentSrc.max_context,
+      }),
+      ...(llmSrc.top_p !== undefined && { top_p: llmSrc.top_p }),
+      ...(llmSrc.presence_penalty !== undefined && {
+        presence_penalty: llmSrc.presence_penalty,
+      }),
     };
 
     // --- channels (keyed record → array) ---
@@ -306,20 +304,6 @@ export const OpenFangAdapter: Adapter = {
         }
       | undefined;
     if (memSrc) {
-      if (memSrc.vector_dims !== undefined) {
-        unmapped.push({
-          source_path: "memory.vector_dims",
-          value: memSrc.vector_dims,
-          reason: "no canonical equivalent",
-        });
-      }
-      if (memSrc.embedding_model !== undefined) {
-        unmapped.push({
-          source_path: "memory.embedding_model",
-          value: memSrc.embedding_model,
-          reason: "no canonical equivalent",
-        });
-      }
       const backend =
         memSrc.backend === "sqlite" ||
         memSrc.backend === "file" ||
@@ -331,6 +315,12 @@ export const OpenFangAdapter: Adapter = {
         ...(memSrc.path !== undefined && { path: memSrc.path }),
         ...(memSrc.connection_string !== undefined && {
           connection_string: memSrc.connection_string,
+        }),
+        ...(memSrc.embedding_model !== undefined && {
+          embedding_model: memSrc.embedding_model,
+        }),
+        ...(memSrc.vector_dims !== undefined && {
+          vector_dims: memSrc.vector_dims,
         }),
       };
     }

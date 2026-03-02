@@ -140,6 +140,10 @@ export const TitanClawAdapter: Adapter = {
       lines.push(`temperature = ${config.agent.temperature}`);
     if (config.agent.max_tokens !== undefined)
       lines.push(`max_tokens = ${config.agent.max_tokens}`);
+    if (config.agent.top_p !== undefined)
+      lines.push(`top_p = ${config.agent.top_p}`);
+    if (config.agent.frequency_penalty !== undefined)
+      lines.push(`frequency_penalty = ${config.agent.frequency_penalty}`);
 
     if (config.memory) {
       lines.push("");
@@ -246,18 +250,6 @@ export const TitanClawAdapter: Adapter = {
         value: providerSrc.api_key_env,
         reason: "no canonical equivalent — set via environment",
       });
-    if (providerSrc.top_p !== undefined)
-      unmapped.push({
-        source_path: "provider.top_p",
-        value: providerSrc.top_p,
-        reason: "no canonical equivalent",
-      });
-    if (providerSrc.frequency_penalty !== undefined)
-      unmapped.push({
-        source_path: "provider.frequency_penalty",
-        value: providerSrc.frequency_penalty,
-        reason: "no canonical equivalent",
-      });
     if (providerSrc.timeout_ms !== undefined)
       unmapped.push({
         source_path: "provider.timeout_ms",
@@ -295,6 +287,10 @@ export const TitanClawAdapter: Adapter = {
       }),
       ...(providerSrc.max_tokens !== undefined && {
         max_tokens: providerSrc.max_tokens,
+      }),
+      ...(providerSrc.top_p !== undefined && { top_p: providerSrc.top_p }),
+      ...(providerSrc.frequency_penalty !== undefined && {
+        frequency_penalty: providerSrc.frequency_penalty,
       }),
     };
 

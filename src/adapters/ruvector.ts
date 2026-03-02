@@ -83,6 +83,9 @@ export const RuVectorAdapter: Adapter = {
       lines.push(`temperature = ${config.agent.temperature}`);
     if (config.agent.max_tokens !== undefined)
       lines.push(`max_tokens = ${config.agent.max_tokens}`);
+    // ruvector stores embedding_model in [llm], not [storage]
+    if (config.memory?.embedding_model)
+      lines.push(`embedding_model = "${esc(config.memory.embedding_model)}"`);
 
     if (config.memory) {
       lines.push("");
@@ -153,12 +156,7 @@ export const RuVectorAdapter: Adapter = {
         value: llmSrc.api_key_env,
         reason: "no canonical equivalent — set via environment",
       });
-    if (llmSrc.embedding_model !== undefined)
-      unmapped.push({
-        source_path: "llm.embedding_model",
-        value: llmSrc.embedding_model,
-        reason: "no canonical equivalent",
-      });
+    // llm.embedding_model maps to canonical memory.embedding_model
     if (src.vector_db !== undefined)
       unmapped.push({
         source_path: "vector_db",
@@ -241,6 +239,10 @@ export const RuVectorAdapter: Adapter = {
         backend,
         ...(storageSrc.path && { path: storageSrc.path }),
         ...(storageSrc.url && { connection_string: storageSrc.url }),
+        // ruvector stores embedding_model in [llm], maps to canonical memory.embedding_model
+        ...(llmSrc.embedding_model !== undefined && {
+          embedding_model: llmSrc.embedding_model,
+        }),
       };
     }
 

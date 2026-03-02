@@ -139,6 +139,12 @@ export const OpenClawAdapter: Adapter = {
       out.channels = channels;
     }
 
+    const llm: Record<string, unknown> = {};
+    if (config.agent.top_p !== undefined) llm.top_p = config.agent.top_p;
+    if (config.agent.frequency_penalty !== undefined)
+      llm.frequency_penalty = config.agent.frequency_penalty;
+    if (Object.keys(llm).length > 0) out.llm = llm;
+
     if (config.memory) {
       out.memory = {
         backend: config.memory.backend,
@@ -195,20 +201,8 @@ export const OpenClawAdapter: Adapter = {
         reason: "no canonical equivalent",
       });
     }
-    if (llmSrc.top_p !== undefined) {
-      unmapped.push({
-        source_path: "llm.top_p",
-        value: llmSrc.top_p,
-        reason: "no canonical equivalent",
-      });
-    }
-    if (llmSrc.frequency_penalty !== undefined) {
-      unmapped.push({
-        source_path: "llm.frequency_penalty",
-        value: llmSrc.frequency_penalty,
-        reason: "no canonical equivalent",
-      });
-    }
+    const top_p = llmSrc.top_p;
+    const frequency_penalty = llmSrc.frequency_penalty;
 
     const agent = {
       name: agentSrc.name ?? "unnamed",
@@ -217,6 +211,8 @@ export const OpenClawAdapter: Adapter = {
       ...(system_prompt !== undefined && { system_prompt }),
       ...(temperature !== undefined && { temperature }),
       ...(max_tokens !== undefined && { max_tokens }),
+      ...(top_p !== undefined && { top_p }),
+      ...(frequency_penalty !== undefined && { frequency_penalty }),
     };
 
     // --- channels block ---

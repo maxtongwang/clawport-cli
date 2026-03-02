@@ -102,6 +102,11 @@ export const ZeroClawAdapter: Adapter = {
         lines.push(
           `connection_string = "${esc(config.memory.connection_string)}"`,
         );
+      if (config.memory.embedding_model)
+        lines.push(`embedding_model = "${esc(config.memory.embedding_model)}"`);
+      // zeroclaw native key is vector_dimensions; canonical is vector_dims
+      if (config.memory.vector_dims !== undefined)
+        lines.push(`vector_dimensions = ${config.memory.vector_dims}`);
     }
 
     // zeroclaw: [[channels]] array
@@ -274,20 +279,6 @@ export const ZeroClawAdapter: Adapter = {
         }
       | undefined;
     if (memSrc) {
-      if (memSrc.embedding_model !== undefined) {
-        unmapped.push({
-          source_path: "memory.embedding_model",
-          value: memSrc.embedding_model,
-          reason: "no canonical equivalent",
-        });
-      }
-      if (memSrc.vector_dimensions !== undefined) {
-        unmapped.push({
-          source_path: "memory.vector_dimensions",
-          value: memSrc.vector_dimensions,
-          reason: "no canonical equivalent",
-        });
-      }
       const backend =
         memSrc.backend === "sqlite" ||
         memSrc.backend === "file" ||
@@ -299,6 +290,13 @@ export const ZeroClawAdapter: Adapter = {
         ...(memSrc.path !== undefined && { path: memSrc.path }),
         ...(memSrc.connection_string !== undefined && {
           connection_string: memSrc.connection_string,
+        }),
+        ...(memSrc.embedding_model !== undefined && {
+          embedding_model: memSrc.embedding_model,
+        }),
+        // zeroclaw native key is vector_dimensions; maps to canonical vector_dims
+        ...(memSrc.vector_dimensions !== undefined && {
+          vector_dims: memSrc.vector_dimensions,
         }),
       };
     }

@@ -213,7 +213,7 @@ describe("openfang parse()", () => {
     expect(result.config.agent.model).toBe("llama3-8b");
   });
 
-  it("flags unmapped top_p", () => {
+  it("maps llm.top_p to canonical agent.top_p", () => {
     const raw = {
       agent: { model: "anthropic/claude-sonnet-4-6" },
       llm: { top_p: 0.9 },
@@ -221,10 +221,10 @@ describe("openfang parse()", () => {
     const result = adapter.parse("config.toml", raw);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const topP = result.config.unmapped.find(
-      (u) => u.source_path === "llm.top_p",
-    );
-    expect(topP).toBeDefined();
+    expect(result.config.agent.top_p).toBe(0.9);
+    expect(
+      result.config.unmapped.find((u) => u.source_path === "llm.top_p"),
+    ).toBeUndefined();
   });
 });
 
