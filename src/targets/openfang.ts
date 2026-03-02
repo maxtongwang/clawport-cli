@@ -54,7 +54,9 @@ export function toOpenFang(config: CanonicalConfig): string {
   // [channels.<type>] — one section per channel
   for (const ch of config.channels) {
     lines.push("");
-    lines.push(`[channels.${ch.type}]`);
+    // TOML bare keys allow only [A-Za-z0-9_-]; quote anything else
+    const typeKey = isBareKey(ch.type) ? ch.type : toml_str(ch.type);
+    lines.push(`[channels.${typeKey}]`);
     // OpenFang prefers env var references over literal tokens
     if (ch.bot_token_env) {
       lines.push(`bot_token_env = ${toml_str(ch.bot_token_env)}`);
@@ -67,7 +69,8 @@ export function toOpenFang(config: CanonicalConfig): string {
     if (ch.chat_id) lines.push(`chat_id = ${toml_str(ch.chat_id)}`);
     if (ch.workspace) lines.push(`workspace = ${toml_str(ch.workspace)}`);
     for (const [k, v] of Object.entries(ch.extra)) {
-      lines.push(`${k} = ${toml_val(v)}`);
+      const key = isBareKey(k) ? k : toml_str(k);
+      lines.push(`${key} = ${toml_val(v)}`);
     }
   }
 
@@ -95,6 +98,10 @@ export function toOpenFang(config: CanonicalConfig): string {
   }
 
   return lines.join("\n") + "\n";
+}
+
+function isBareKey(s: string): boolean {
+  return /^[A-Za-z0-9_-]+$/.test(s);
 }
 
 function toml_str(s: string): string {

@@ -63,23 +63,16 @@ export function detect(dir: string): DetectResult | null {
 }
 
 function makeResult(c: { adapter: Adapter; configFile: string }): DetectResult {
-  const ext = path.extname(c.configFile).toLowerCase();
-  const language =
-    ext === ".toml"
-      ? ("rust" as const)
-      : ext === ".yaml" || ext === ".yml"
-        ? ("unknown" as const)
-        : ext === ".json"
-          ? ("typescript" as const)
-          : ("unknown" as const);
-
+  // Language cannot be reliably inferred from config file extension alone —
+  // TOML is used by Rust, Go, Python, and others; JSON is similarly cross-language.
+  // The watcher's generator.ts detects language independently from repo structure.
   return {
     adapter: c.adapter,
     fingerprint: {
       name: c.adapter.cloneName,
       schema_version: c.adapter.schemaVersion,
       config_file: c.configFile,
-      language,
+      language: "unknown",
     },
   };
 }

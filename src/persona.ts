@@ -85,7 +85,10 @@ function convertConfig(
         obj = JSON.parse(content);
         break;
     }
-  } catch {
+  } catch (err) {
+    process.stderr.write(
+      `[clawport] Warning: failed to convert persona config (${from} → ${to}): ${(err as Error).message ?? String(err)}\n`,
+    );
     const comment = to === "json" ? "// " : "# ";
     return `${comment}(parse error converting from ${from} to ${to})\n`;
   }
@@ -137,6 +140,9 @@ function serializeEnvContent(obj: Record<string, unknown>): string {
       const s = String(v);
       lines.push(`${k}=${s.includes(" ") || s.includes("#") ? `"${s}"` : s}`);
     } else {
+      process.stderr.write(
+        `[clawport] Warning: persona key "${k}" has a complex value and was not serialized to ENV — manual migration required.\n`,
+      );
       lines.push(`# ${k}: (complex value — manual migration required)`);
     }
   }
@@ -152,6 +158,9 @@ function serializeToml(obj: Record<string, unknown>): string {
     } else if (typeof v === "number" || typeof v === "boolean") {
       lines.push(`${k} = ${v}`);
     } else {
+      process.stderr.write(
+        `[clawport] Warning: persona key "${k}" has a complex value and was not serialized to TOML — manual migration required.\n`,
+      );
       lines.push(`# ${k}: (complex value — manual migration required)`);
     }
   }
