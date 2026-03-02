@@ -820,3 +820,390 @@ describe("detect() content fingerprinting", () => {
     }
   });
 });
+
+// ── parse() tests for remaining 19 adapters ──────────────────────────────────
+
+describe("nanobot parse()", () => {
+  const adapter = getAdapter("nanobot")!;
+  it("maps llm.model and bot.name to canonical agent", () => {
+    const raw = {
+      llm: { model: "gpt-4", provider: "openai" },
+      bot: { name: "nano" },
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("nano");
+    expect(result.config.agent.model).toBe("gpt-4");
+    expect(result.config.agent.provider).toBe("openai");
+  });
+  it("flags unmapped bot fields", () => {
+    const raw = {
+      llm: { model: "gpt-4" },
+      bot: { name: "nano", persona: "helpful", max_turns: 10 },
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const paths = result.config.unmapped.map((u) => u.source_path);
+    expect(paths).toContain("bot.persona");
+    expect(paths).toContain("bot.max_turns");
+  });
+});
+
+describe("smallclaw parse()", () => {
+  const adapter = getAdapter("smallclaw")!;
+  it("prefers ollama block when present", () => {
+    const raw = {
+      agent: { name: "small" },
+      ollama: { model: "mistral" },
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.model).toBe("mistral");
+    expect(result.config.agent.provider).toBe("ollama");
+  });
+  it("falls back to openai block", () => {
+    const raw = {
+      agent: { name: "small" },
+      openai: { model: "gpt-4o" },
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.model).toBe("gpt-4o");
+    expect(result.config.agent.provider).toBe("openai");
+  });
+});
+
+describe("picobot parse()", () => {
+  const adapter = getAdapter("picobot")!;
+  it("maps flat config fields", () => {
+    const raw = { name: "pico", provider: "openai", model: "gpt-3.5-turbo" };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("pico");
+    expect(result.config.agent.model).toBe("gpt-3.5-turbo");
+    expect(result.config.agent.provider).toBe("openai");
+  });
+  it("flags unmapped fields", () => {
+    const raw = {
+      name: "pico",
+      provider: "openai",
+      model: "gpt-3.5-turbo",
+      webhook_port: 8080,
+      debug: true,
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const paths = result.config.unmapped.map((u) => u.source_path);
+    expect(paths).toContain("webhook_port");
+    expect(paths).toContain("debug");
+  });
+});
+
+describe("copaw parse()", () => {
+  const adapter = getAdapter("copaw")!;
+  it("maps model.name and model.provider", () => {
+    const raw = {
+      agent: { name: "copaw-agent" },
+      model: { provider: "qwen", name: "qwen-max" },
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("copaw-agent");
+    expect(result.config.agent.model).toBe("qwen-max");
+    expect(result.config.agent.provider).toBe("qwen");
+  });
+});
+
+describe("rowboat parse()", () => {
+  const adapter = getAdapter("rowboat")!;
+  it("maps project.name and llm fields", () => {
+    const raw = {
+      project: { name: "row-proj" },
+      llm: { model: "gpt-4", provider: "openai" },
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("row-proj");
+    expect(result.config.agent.model).toBe("gpt-4");
+    expect(result.config.agent.provider).toBe("openai");
+  });
+});
+
+describe("thepopebot parse()", () => {
+  const adapter = getAdapter("thepopebot")!;
+  it("maps flat config fields", () => {
+    const raw = {
+      name: "pope",
+      provider: "anthropic",
+      model: "claude-3-sonnet",
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("pope");
+    expect(result.config.agent.model).toBe("claude-3-sonnet");
+    expect(result.config.agent.provider).toBe("anthropic");
+  });
+});
+
+describe("ouroboros parse()", () => {
+  const adapter = getAdapter("ouroboros")!;
+  it("maps agent.name and llm fields", () => {
+    const raw = {
+      agent: { name: "ouro", self_modify: true },
+      llm: { model: "claude", provider: "anthropic" },
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("ouro");
+    expect(result.config.agent.model).toBe("claude");
+    const paths = result.config.unmapped.map((u) => u.source_path);
+    expect(paths).toContain("agent.self_modify");
+  });
+});
+
+describe("freeclaw parse()", () => {
+  const adapter = getAdapter("freeclaw")!;
+  it("uses first provider in providers[]", () => {
+    const raw = {
+      agent: { name: "free" },
+      providers: [{ name: "groq", model: "mixtral-8x7b" }],
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("free");
+    expect(result.config.agent.model).toBe("mixtral-8x7b");
+    expect(result.config.agent.provider).toBe("groq");
+  });
+});
+
+describe("grip-ai parse()", () => {
+  const adapter = getAdapter("grip-ai")!;
+  it("splits provider/model compound string", () => {
+    const raw = {
+      agent: { name: "grip", model: "anthropic/claude-3-sonnet" },
+      tools: [],
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("grip");
+    expect(result.config.agent.model).toBe("claude-3-sonnet");
+    expect(result.config.agent.provider).toBe("anthropic");
+  });
+});
+
+describe("memubot parse()", () => {
+  const adapter = getAdapter("memubot")!;
+  it("maps agent fields directly", () => {
+    const raw = {
+      agent: { name: "memu", provider: "anthropic", model: "claude-3-sonnet" },
+      memory: {
+        backend: "postgres",
+        connection_string: "postgresql://localhost/memu",
+      },
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("memu");
+    expect(result.config.memory?.backend).toBe("postgres");
+    expect(result.config.memory?.connection_string).toBe(
+      "postgresql://localhost/memu",
+    );
+  });
+});
+
+describe("n8nclaw parse()", () => {
+  const adapter = getAdapter("n8nclaw")!;
+  it("maps agent fields and flags n8n-specific fields", () => {
+    const raw = {
+      agent: {
+        name: "n8n",
+        provider: "anthropic",
+        model: "claude-3-sonnet",
+        credentials_id: "cred-abc",
+      },
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("n8n");
+    const paths = result.config.unmapped.map((u) => u.source_path);
+    expect(paths).toContain("agent.credentials_id");
+  });
+});
+
+describe("aionui parse()", () => {
+  const adapter = getAdapter("aionui")!;
+  it("maps agent fields and flags ui block", () => {
+    const raw = {
+      agent: { name: "aio", provider: "anthropic", model: "claude-3-sonnet" },
+      ui: { theme: "dark", font_size: 14 },
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("aio");
+    const paths = result.config.unmapped.map((u) => u.source_path);
+    expect(paths).toContain("ui");
+  });
+});
+
+describe("nullclaw parse()", () => {
+  const adapter = getAdapter("nullclaw")!;
+  it("maps first agent from agents.list[] with compound model", () => {
+    const raw = {
+      agents: {
+        list: [
+          {
+            identity: { name: "null-agent" },
+            model: { primary: "anthropic/claude-3-sonnet" },
+          },
+        ],
+      },
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("null-agent");
+    expect(result.config.agent.model).toBe("claude-3-sonnet");
+    expect(result.config.agent.provider).toBe("anthropic");
+  });
+});
+
+describe("andyclaw parse()", () => {
+  const adapter = getAdapter("andyclaw")!;
+  it("maps first agent from agents.list[] with compound model", () => {
+    const raw = {
+      agents: {
+        list: [
+          {
+            identity: { name: "andy-agent" },
+            model: { primary: "openai/gpt-4o" },
+          },
+        ],
+      },
+    };
+    const result = adapter.parse("config.json", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("andy-agent");
+    expect(result.config.agent.model).toBe("gpt-4o");
+    expect(result.config.agent.provider).toBe("openai");
+  });
+});
+
+describe("bashobot parse()", () => {
+  const adapter = getAdapter("bashobot")!;
+  it("infers provider from BASHOBOT_LLM env key", () => {
+    const raw = { BASHOBOT_LLM: "claude" };
+    const result = adapter.parse(".env", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("bashobot");
+    expect(result.config.agent.provider).toBe("anthropic");
+  });
+  it("uses openai for BASHOBOT_LLM=openai", () => {
+    const raw = { BASHOBOT_LLM: "openai" };
+    const result = adapter.parse(".env", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.provider).toBe("openai");
+  });
+});
+
+describe("opengork parse()", () => {
+  const adapter = getAdapter("opengork")!;
+  it("maps ollama model when mode=local", () => {
+    const raw = { OPENGORK_MODE: "local", OLLAMA_MODEL: "mistral" };
+    const result = adapter.parse(".env", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.model).toBe("mistral");
+    expect(result.config.agent.provider).toBe("ollama");
+  });
+  it("uses grok-2 when mode=xai", () => {
+    const raw = { OPENGORK_MODE: "xai" };
+    const result = adapter.parse(".env", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.model).toBe("grok-2");
+    expect(result.config.agent.provider).toBe("xai");
+  });
+});
+
+describe("zclaw parse()", () => {
+  const adapter = getAdapter("zclaw")!;
+  it("maps ZCLAW env vars to canonical agent", () => {
+    const raw = {
+      ZCLAW_PROVIDER: "anthropic",
+      ZCLAW_MODEL: "claude-3-sonnet",
+      ZCLAW_TELEGRAM_TOKEN: "tg-token-xyz",
+    };
+    const result = adapter.parse(".env", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("zclaw-agent");
+    expect(result.config.agent.model).toBe("claude-3-sonnet");
+    expect(result.config.agent.provider).toBe("anthropic");
+    expect(result.config.channels[0].type).toBe("telegram");
+  });
+});
+
+describe("mimiclaw parse()", () => {
+  const adapter = getAdapter("mimiclaw")!;
+  it("maps MIMI_SECRET env vars to canonical agent", () => {
+    const raw = {
+      MIMI_SECRET_MODEL_PROVIDER: "anthropic",
+      MIMI_SECRET_MODEL: "claude-3-sonnet",
+      MIMI_SECRET_TG_TOKEN: "tg-mimi-token",
+    };
+    const result = adapter.parse(".env", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("mimiclaw-agent");
+    expect(result.config.agent.model).toBe("claude-3-sonnet");
+    expect(result.config.agent.provider).toBe("anthropic");
+    expect(result.config.channels[0].type).toBe("telegram");
+  });
+});
+
+describe("carapace parse()", () => {
+  const adapter = getAdapter("carapace")!;
+  it("maps agent.name and runtime fields", () => {
+    const raw = {
+      agent: { name: "cara" },
+      runtime: { provider: "anthropic", model: "claude-3-sonnet" },
+    };
+    const result = adapter.parse("config.toml", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.agent.name).toBe("cara");
+    expect(result.config.agent.model).toBe("claude-3-sonnet");
+    expect(result.config.agent.provider).toBe("anthropic");
+  });
+  it("flags wasm-specific fields", () => {
+    const raw = {
+      agent: { name: "cara", wasm_runtime: "wasmtime" },
+      runtime: { provider: "anthropic", model: "claude-3-sonnet" },
+      sandbox: { syscall_policy: "strict" },
+    };
+    const result = adapter.parse("config.toml", raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const paths = result.config.unmapped.map((u) => u.source_path);
+    expect(paths).toContain("agent.wasm_runtime");
+    expect(paths).toContain("sandbox");
+  });
+});

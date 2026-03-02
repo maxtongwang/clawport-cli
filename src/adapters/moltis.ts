@@ -197,8 +197,10 @@ export const MoltisAdapter: Adapter = {
       if (ch.from_address)
         lines.push(`from_address = "${esc(ch.from_address)}"`);
       if (ch.webhook_url) lines.push(`webhook_url = "${esc(ch.webhook_url)}"`);
-      for (const [k, v] of Object.entries(ch.extra))
-        lines.push(`${k} = ${tomlVal(v)}`);
+      for (const [k, v] of Object.entries(ch.extra)) {
+        const key = isBareKey(k) ? k : `"${esc(k)}"`;
+        lines.push(`${key} = ${tomlVal(v)}`);
+      }
     }
 
     const allUnmapped = [...unmappedRest, ...unmappedCanonicalExtras(config)];

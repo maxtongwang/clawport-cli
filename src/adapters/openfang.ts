@@ -165,7 +165,8 @@ export const OpenFangAdapter: Adapter = {
         lines.push(`from_address = "${esc(ch.from_address)}"`);
       if (ch.webhook_url) lines.push(`webhook_url = "${esc(ch.webhook_url)}"`);
       for (const [k, v] of Object.entries(ch.extra)) {
-        lines.push(`${k} = ${tomlVal(v)}`);
+        const key = isBareKey(k) ? k : `"${esc(k)}"`;
+        lines.push(`${key} = ${tomlVal(v)}`);
       }
     }
 

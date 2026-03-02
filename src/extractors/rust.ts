@@ -49,17 +49,52 @@ function findRustConfigFiles(dir: string): string[] {
   return found;
 }
 
+// Extract content between the first matching { } pair starting at pos.
+// Tracks depth so nested braces (e.g. derive macros, inline structs) are handled.
+function extractBraceBody(src: string, pos: number): string | null {
+  let i = pos;
+  while (i < src.length && src[i] !== "{") i++;
+  if (i >= src.length) return null;
+  const start = i;
+  let depth = 0;
+  for (; i < src.length; i++) {
+    if (src[i] === "{") depth++;
+    else if (src[i] === "}") {
+      depth--;
+      if (depth === 0) return src.slice(start + 1, i);
+    }
+  }
+  return null; // unclosed
+}
+
+// Extract the inner type of a generic like Option<T> or Option<Vec<String>>.
+// startIdx should point to the opening '<'.
+function extractAngleBracketInner(s: string, startIdx: number): string {
+  let depth = 0;
+  for (let i = startIdx; i < s.length; i++) {
+    if (s[i] === "<") depth++;
+    else if (s[i] === ">") {
+      depth--;
+      if (depth === 0) return s.slice(startIdx + 1, i);
+    }
+  }
+  return s.slice(startIdx + 1); // unclosed — return rest
+}
+
 function parseStructs(src: string, file: string): ExtractedSchema[] {
   const results: ExtractedSchema[] = [];
-  // Match: pub struct FooConfig { ... } or struct FooConfig { ... }
-  const structRe = /(?:pub\s+)?struct\s+(\w*[Cc]onfig\w*)\s*\{([^}]+)\}/g;
+  // Find: pub struct FooConfig or struct FooConfig (multiline body via extractBraceBody)
+  const re = /(?:pub\s+)?struct\s+(\w*[Cc]onfig\w*)/g;
   let match: RegExpExecArray | null;
 
-  while ((match = structRe.exec(src)) !== null) {
-    const structName = match[1];
-    const body = match[2];
-    const fields = parseFields(body);
-    results.push({ struct_name: structName, fields, source_file: file });
+  while ((match = re.exec(src)) !== null) {
+    const body = extractBraceBody(src, match.index + match[0].length);
+    if (body === null) continue;
+    results.push({
+      struct_name: match[1],
+      fields: parseFields(body),
+      source_file: file,
+    });
   }
 
   return results;
@@ -79,7 +114,10 @@ function parseFields(body: string): ExtractedField[] {
     if (name.startsWith("_") || name === "where") continue;
 
     const optional = rawType.startsWith("Option<");
-    const innerType = optional ? rawType.slice(7, -1) : rawType;
+    // Use bracket-depth scanning to correctly unwrap Option<Vec<T>> etc.
+    const innerType = optional
+      ? extractAngleBracketInner(rawType, rawType.indexOf("<"))
+      : rawType;
     const needs_review = /Vec<|HashMap<|BTreeMap<|Box<|Arc<|Rc</.test(
       innerType,
     );

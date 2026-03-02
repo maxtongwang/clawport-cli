@@ -45,6 +45,21 @@ function findPyConfigFiles(dir: string): string[] {
   return found;
 }
 
+// Extract inner type of Optional[T] using bracket-depth scanning so that
+// nested generics like Optional[List[Dict[str, int]]] are handled correctly.
+// startIdx should point to the opening '['.
+function extractSquareBracketInner(s: string, startIdx: number): string {
+  let depth = 0;
+  for (let i = startIdx; i < s.length; i++) {
+    if (s[i] === "[") depth++;
+    else if (s[i] === "]") {
+      depth--;
+      if (depth === 0) return s.slice(startIdx + 1, i);
+    }
+  }
+  return s.slice(startIdx + 1); // unclosed — return rest
+}
+
 function parsePyClasses(src: string, file: string): ExtractedPySchema[] {
   const results: ExtractedPySchema[] = [];
   // Match: class FooConfig(BaseModel): or class FooConfig:
@@ -83,9 +98,12 @@ function parsePyFields(body: string): ExtractedPyField[] {
       py_type.includes("| None") ||
       default_val === "None";
 
-    const innerType = py_type.startsWith("Optional[")
-      ? py_type.slice(9, -1)
-      : py_type;
+    // Use bracket-depth scanning to correctly unwrap Optional[List[Dict[...]]] etc.
+    const bracketIdx = py_type.indexOf("[");
+    const innerType =
+      py_type.startsWith("Optional[") && bracketIdx >= 0
+        ? extractSquareBracketInner(py_type, bracketIdx)
+        : py_type;
 
     const needs_review = /dict\[|list\[|Dict\[|List\[|Union\[/.test(innerType);
 

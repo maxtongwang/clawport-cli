@@ -45,15 +45,35 @@ function findTsConfigFiles(dir: string): string[] {
   return found;
 }
 
+// Extract the content between the first matching { } pair starting at pos.
+// Tracks depth so nested braces are handled correctly.
+function extractBraceBody(src: string, pos: number): string | null {
+  let i = pos;
+  while (i < src.length && src[i] !== "{") i++;
+  if (i >= src.length) return null;
+  const start = i;
+  let depth = 0;
+  for (; i < src.length; i++) {
+    if (src[i] === "{") depth++;
+    else if (src[i] === "}") {
+      depth--;
+      if (depth === 0) return src.slice(start + 1, i);
+    }
+  }
+  return null; // unclosed
+}
+
 function parseInterfaces(src: string, file: string): ExtractedTsSchema[] {
   const results: ExtractedTsSchema[] = [];
-  // Match: interface FooConfig { ... }
-  const re = /interface\s+(\w*[Cc]onfig\w*)\s*\{([^}]+)\}/g;
+  // Find: interface FooConfig (handles multiline bodies via extractBraceBody)
+  const re = /\binterface\s+(\w*[Cc]onfig\w*)/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(src)) !== null) {
+    const body = extractBraceBody(src, match.index + match[0].length);
+    if (body === null) continue;
     results.push({
       type_name: match[1],
-      fields: parseTsFields(match[2]),
+      fields: parseTsFields(body),
       source_file: file,
     });
   }
@@ -62,13 +82,15 @@ function parseInterfaces(src: string, file: string): ExtractedTsSchema[] {
 
 function parseTypes(src: string, file: string): ExtractedTsSchema[] {
   const results: ExtractedTsSchema[] = [];
-  // Match: type FooConfig = { ... }
-  const re = /type\s+(\w*[Cc]onfig\w*)\s*=\s*\{([^}]+)\}/g;
+  // Find: type FooConfig = (handles multiline bodies via extractBraceBody)
+  const re = /\btype\s+(\w*[Cc]onfig\w*)\s*=/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(src)) !== null) {
+    const body = extractBraceBody(src, match.index + match[0].length);
+    if (body === null) continue;
     results.push({
       type_name: match[1],
-      fields: parseTsFields(match[2]),
+      fields: parseTsFields(body),
       source_file: file,
     });
   }
