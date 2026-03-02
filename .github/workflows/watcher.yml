@@ -52,7 +52,9 @@ jobs:
           git config user.name "clawport-watcher[bot]"
           git config user.email "watcher@clawport-cli"
           git checkout -b "$BRANCH"
-          git add src/adapters/ .watcher-state.json
+          git add src/adapters/
+          # state file may not exist on first run — add only if present
+          git add .watcher-state.json 2>/dev/null || true
           git commit -m "chore: watcher — new/updated adapter skeletons ${DATE}"
           git push origin "$BRANCH"
           gh pr create \

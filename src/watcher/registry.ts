@@ -3,7 +3,7 @@
 // On each run, compares against known adapter list and triggers generator for new/updated ones.
 // Designed to run as a daily GitHub Actions cron job.
 
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { generateAdapter } from "./generator.js";
@@ -120,7 +120,9 @@ async function main(): Promise<void> {
     // Clone the repo to a temp dir and run extractor + generator
     const tmpDir = fs.mkdtempSync("/tmp/clawport-");
     try {
-      execSync(`git clone --depth 1 ${repoUrl} ${tmpDir}`, { stdio: "pipe" });
+      execFileSync("git", ["clone", "--depth", "1", repoUrl, tmpDir], {
+        stdio: "pipe",
+      });
       await generateAdapter({ repoUrl, repoDir: tmpDir, headCommit, isNew });
       if (isNew) newCount++;
       else updatedCount++;
