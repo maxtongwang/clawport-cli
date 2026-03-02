@@ -1,6 +1,6 @@
 // Adapter registry — every entry is both a source (parse) and a target (write).
 // Import order determines detection priority for `clawport detect`.
-// Coverage: 26/32 clawclones.com clones (6 blocked: C×2, Zig, Kotlin, Shell×2)
+// Coverage: 32/32 clawclones.com clones
 
 import type { Adapter } from "../types.js";
 // Original 3
@@ -32,6 +32,13 @@ import { GripAiAdapter } from "./gripai.js";
 import { MemuBotAdapter } from "./memubot.js";
 import { N8nClawAdapter } from "./n8nclaw.js";
 import { AionUiAdapter } from "./aionui.js";
+// Batch 3 (this session — completing 32/32)
+import { NullClawAdapter } from "./nullclaw.js";
+import { AndyClawAdapter } from "./andyclaw.js";
+import { BashoBotAdapter } from "./bashobot.js";
+import { OpenGorkAdapter } from "./opengork.js";
+import { ZClawAdapter } from "./zclaw.js";
+import { MimiClawAdapter } from "./mimiclaw.js";
 
 export const ADAPTERS: Adapter[] = [
   // ── TOML-based ───────────────────────────────────────────────────────────
@@ -47,6 +54,8 @@ export const ADAPTERS: Adapter[] = [
   // ── JSON-based ───────────────────────────────────────────────────────────
   PicoClawAdapter, // JSON agents.defaults + model_list
   TinyClawAdapter, // JSON agents map keyed by ID
+  NullClawAdapter, // JSON agents.list[] + compound provider/model string (Zig)
+  AndyClawAdapter, // JSON agents.list[] OpenClaw schema, no channels (Kotlin/Android)
   KafClawAdapter, // JSON flat agent + storage.dsn
   SafeClawAdapter, // JSON llm + agent, enforces env vars
   NanoClawAdapter, // JSON minimal, provider:model colon-compound
@@ -62,6 +71,12 @@ export const ADAPTERS: Adapter[] = [
   MemuBotAdapter, // JSON agent + memory + capabilities (enterprise)
   N8nClawAdapter, // JSON agent, workflow block flagged
   AionUiAdapter, // JSON agent, ui block flagged (Electron desktop)
+
+  // ── Shell env-based ──────────────────────────────────────────────────────
+  BashoBotAdapter, // env BASHOBOT_LLM + TELEGRAM_* (pure Bash)
+  OpenGorkAdapter, // env OPENGORK_MODE + OLLAMA_MODEL (Grok/Ollama)
+  ZClawAdapter, // env provision template — ESP32 C firmware
+  MimiClawAdapter, // env provision template — ESP32-S3 bare-metal C
 
   // ── YAML-based ───────────────────────────────────────────────────────────
   OpenClawAdapter, // YAML (fallback)

@@ -8,7 +8,7 @@ import yaml from "js-yaml";
 import TOML from "@iarna/toml";
 import type { AgentPersona, PersonaFile } from "./types.js";
 
-export type AgentConfigFormat = "yaml" | "toml" | "json";
+export type AgentConfigFormat = "yaml" | "toml" | "json" | "env";
 
 // Factory: returns a parsePersona method bound to a specific format + filename.
 export function makeParsePersona(
@@ -71,6 +71,7 @@ function convertConfig(
   try {
     if (from === "yaml") obj = yaml.load(content);
     else if (from === "toml") obj = TOML.parse(content);
+    else if (from === "env") obj = parseEnvContent(content);
     else obj = JSON.parse(content);
   } catch {
     const comment = to === "json" ? "// " : "# ";
@@ -82,7 +83,46 @@ function convertConfig(
 
   if (to === "yaml") return yaml.dump(record);
   if (to === "json") return JSON.stringify(record, null, 2) + "\n";
+  if (to === "env") return serializeEnvContent(record);
   return serializeToml(record);
+}
+
+// Parse KEY=VALUE shell env content into a flat object.
+function parseEnvContent(content: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq < 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let val = trimmed.slice(eq + 1).trim();
+    if (
+      (val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'"))
+    )
+      val = val.slice(1, -1);
+    result[key] = val;
+  }
+  return result;
+}
+
+// Flat KEY=VALUE serializer — primitives only; nested values get commented.
+function serializeEnvContent(obj: Record<string, unknown>): string {
+  const lines: string[] = [];
+  for (const [k, v] of Object.entries(obj)) {
+    if (
+      typeof v === "string" ||
+      typeof v === "number" ||
+      typeof v === "boolean"
+    ) {
+      const s = String(v);
+      lines.push(`${k}=${s.includes(" ") || s.includes("#") ? `"${s}"` : s}`);
+    } else {
+      lines.push(`# ${k}: (complex value — manual migration required)`);
+    }
+  }
+  return lines.join("\n") + "\n";
 }
 
 // Flat-object TOML serializer — primitives only; nested values get commented.

@@ -27,7 +27,9 @@ export function detect(dir: string): DetectResult | null {
               ? ("unknown" as const)
               : ext === ".json"
                 ? ("typescript" as const)
-                : ("unknown" as const);
+                : ext === ".env"
+                  ? ("unknown" as const)
+                  : ("unknown" as const);
 
         return {
           adapter,
