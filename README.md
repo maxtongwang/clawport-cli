@@ -28,20 +28,23 @@ clawport list
 # Dry-run: see what maps cleanly and what doesn't
 clawport validate ./my-agent-dir
 
-# Port openclaw → zeroclaw
+# Port two directories (auto-discovers config files and output path)
+clawport port ./my-openclaw-dir ./my-zeroclaw-dir
+
+# Export with explicit target clone and output file
 clawport export ./my-openclaw-dir --to zeroclaw -o config.toml
 
-# Port zeroclaw → openfang
+# Export to openfang
 clawport export ./my-zeroclaw-dir --to openfang -o ~/.openfang/config.toml
 
-# Port with persona files (MEMORY.md + agent.yaml/toml)
+# Include persona files (MEMORY.md + agent.yaml/toml)
 clawport export ./my-openclaw-dir --to openfang --persona-dir ./personas -o out/
 
 # Export to canonical JSON (interchange / debug format)
 clawport export ./my-agent-dir --to canonical -o config.json
 
-# Pipe output directly
-clawport export ./my-agent-dir --to zeroclaw > config.toml
+# Write to stdout
+clawport export ./my-agent-dir --to zeroclaw --stdout
 ```
 
 ## Supported Clones
