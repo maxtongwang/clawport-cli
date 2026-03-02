@@ -113,8 +113,17 @@ export const AionUiAdapter: Adapter = {
       };
     }
 
-    if (config.unmapped.length > 0) {
-      out._clawport_unmapped = config.unmapped.map(
+    // aionui has no skills/tools block — flag any incoming skills as unmapped
+    const allUnmapped = [
+      ...config.unmapped,
+      ...config.skills.map((s) => ({
+        source_path: `skills[${s.name}]`,
+        value: s,
+        reason: "aionui has no skills support in its native schema",
+      })),
+    ];
+    if (allUnmapped.length > 0) {
+      out._clawport_unmapped = allUnmapped.map(
         (u) => `${u.source_path}: ${u.reason}`,
       );
     }

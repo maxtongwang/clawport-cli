@@ -124,6 +124,7 @@ export const RowboatAdapter: Adapter = {
       out.tools = config.skills.map((s) => ({
         name: s.name,
         enabled: s.enabled,
+        ...(s.config && { config: s.config }),
       }));
     }
 
@@ -249,6 +250,12 @@ export const RowboatAdapter: Adapter = {
       },
     );
 
+    const knownToolKeys = new Set([
+      "name",
+      "enabled",
+      "description",
+      "parameters",
+    ]);
     const skills = (src.tools ?? []).map((t) => {
       if (t.description !== undefined)
         unmapped.push({
@@ -262,7 +269,16 @@ export const RowboatAdapter: Adapter = {
           value: t.parameters,
           reason: "no canonical equivalent",
         });
-      return { name: t.name, enabled: t.enabled ?? true };
+      // Preserve any extra fields (e.g. config from other adapters) as skill config
+      const config: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(t as Record<string, unknown>)) {
+        if (!knownToolKeys.has(k)) config[k] = v;
+      }
+      return {
+        name: t.name,
+        enabled: t.enabled ?? true,
+        ...(Object.keys(config).length > 0 && { config }),
+      };
     });
 
     const memSrc = src.memory;

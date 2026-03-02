@@ -120,8 +120,17 @@ export const PicoClawAdapter: Adapter = {
 
     if (config.memory?.path) out.data_dir = config.memory.path;
 
-    if (config.unmapped.length > 0) {
-      out._clawport_unmapped = config.unmapped.map(
+    // picoclaw has no generic skills array — flag any incoming skills as unmapped
+    const allUnmapped = [
+      ...config.unmapped,
+      ...config.skills.map((s) => ({
+        source_path: `skills[${s.name}]`,
+        value: s,
+        reason: "picoclaw has no generic skills array — use named tools block",
+      })),
+    ];
+    if (allUnmapped.length > 0) {
+      out._clawport_unmapped = allUnmapped.map(
         (u) => `${u.source_path}: ${u.reason}`,
       );
     }
