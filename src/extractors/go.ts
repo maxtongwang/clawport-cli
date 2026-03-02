@@ -46,16 +46,36 @@ function findGoConfigFiles(dir: string): string[] {
   return found;
 }
 
+// Extract content between the first matching { } pair starting at pos.
+// Tracks depth so nested braces are handled correctly.
+function extractBraceBody(src: string, pos: number): string | null {
+  let i = pos;
+  while (i < src.length && src[i] !== "{") i++;
+  if (i >= src.length) return null;
+  const start = i;
+  let depth = 0;
+  for (; i < src.length; i++) {
+    if (src[i] === "{") depth++;
+    else if (src[i] === "}") {
+      depth--;
+      if (depth === 0) return src.slice(start + 1, i);
+    }
+  }
+  return null; // unclosed
+}
+
 function parseGoStructs(src: string, file: string): ExtractedGoSchema[] {
   const results: ExtractedGoSchema[] = [];
-  // Match: type FooConfig struct { ... }
-  const re = /type\s+(\w*[Cc]onfig\w*)\s+struct\s*\{([^}]+)\}/g;
+  // Find: type FooConfig struct (multiline body via extractBraceBody)
+  const re = /\btype\s+(\w*[Cc]onfig\w*)\s+struct\s*/g;
   let match: RegExpExecArray | null;
 
   while ((match = re.exec(src)) !== null) {
+    const body = extractBraceBody(src, match.index + match[0].length);
+    if (body === null) continue;
     results.push({
       struct_name: match[1],
-      fields: parseGoFields(match[2]),
+      fields: parseGoFields(body),
       source_file: file,
     });
   }
