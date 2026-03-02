@@ -1,0 +1,329 @@
+// Adapter: OpenFang
+// Schema version pinned to: RightNow-AI/openfang@0.3.1 (2026-02-28)
+// Config format: TOML (~/.openfang/config.toml)
+// Field mapping is exact — every field explicitly handled or flagged unmapped.
+
+import type {
+  Adapter,
+  AdapterResult,
+  CanonicalChannel,
+  CanonicalConfig,
+  UnmappedField,
+} from "../types.js";
+
+// Exact shape of openfang config.toml as of schema_version above.
+// OpenFang uses "provider/model" compound string in agent.model.
+interface OpenFangConfig {
+  agent?: {
+    name?: string;
+    model?: string; // compound: "anthropic/claude-sonnet-4-6"
+    system_prompt?: string;
+    // flagged: openfang-specific
+    max_context?: number;
+    tools?: string[];
+  };
+  llm?: {
+    temperature?: number;
+    max_tokens?: number;
+    // flagged: no canonical equivalent
+    top_p?: number;
+    presence_penalty?: number;
+  };
+  // OpenFang uses [channels.<type>] keyed sections, parsed as a record
+  channels?: Record<
+    string,
+    {
+      bot_token_env?: string;
+      bot_token?: string;
+      guild_id?: string;
+      chat_id?: string;
+      workspace?: string;
+      default_agent?: string; // flagged
+      overrides?: unknown; // flagged
+      [key: string]: unknown;
+    }
+  >;
+  memory?: {
+    backend?: string;
+    path?: string;
+    connection_string?: string;
+    // flagged
+    vector_dims?: number;
+    embedding_model?: string;
+  };
+  skills?: Array<{
+    name: string;
+    enabled?: boolean;
+    config?: Record<string, unknown>;
+  }>;
+  // flagged top-level keys
+  telemetry?: unknown;
+  log_level?: unknown;
+  budget?: unknown;
+}
+
+export const OpenFangAdapter: Adapter = {
+  cloneName: "openfang",
+  schemaVersion: "0.3.1",
+  configPatterns: ["config.toml", ".openfang/config.toml"],
+  defaultOutputFile: "config.toml",
+
+  write(config: CanonicalConfig): string {
+    const lines: string[] = [];
+
+    lines.push("[agent]");
+    lines.push(`name = "${esc(config.agent.name)}"`);
+    // OpenFang requires "provider/model" compound format
+    const model = config.agent.model.includes("/")
+      ? config.agent.model
+      : `${config.agent.provider}/${config.agent.model}`;
+    lines.push(`model = "${esc(model)}"`);
+    if (config.agent.system_prompt !== undefined) {
+      lines.push(`system_prompt = "${esc(config.agent.system_prompt)}"`);
+    }
+
+    const hasLlm =
+      config.agent.temperature !== undefined ||
+      config.agent.max_tokens !== undefined;
+    if (hasLlm) {
+      lines.push("");
+      lines.push("[llm]");
+      if (config.agent.temperature !== undefined)
+        lines.push(`temperature = ${config.agent.temperature}`);
+      if (config.agent.max_tokens !== undefined)
+        lines.push(`max_tokens = ${config.agent.max_tokens}`);
+    }
+
+    if (config.memory) {
+      lines.push("");
+      lines.push("[memory]");
+      lines.push(`backend = "${esc(config.memory.backend)}"`);
+      if (config.memory.path) lines.push(`path = "${esc(config.memory.path)}"`);
+      if (config.memory.connection_string) {
+        lines.push(
+          `connection_string = "${esc(config.memory.connection_string)}"`,
+        );
+      }
+    }
+
+    // OpenFang uses [channels.<type>] keyed sections
+    for (const ch of config.channels) {
+      lines.push("");
+      lines.push(`[channels.${ch.type}]`);
+      if (ch.bot_token_env) {
+        lines.push(`bot_token_env = "${esc(ch.bot_token_env)}"`);
+      } else if (ch.bot_token) {
+        lines.push(`# WARNING: literal token — prefer bot_token_env`);
+        lines.push(`bot_token = "${esc(ch.bot_token)}"`);
+      }
+      if (ch.guild_id) lines.push(`guild_id = "${esc(ch.guild_id)}"`);
+      if (ch.chat_id) lines.push(`chat_id = "${esc(ch.chat_id)}"`);
+      if (ch.workspace) lines.push(`workspace = "${esc(ch.workspace)}"`);
+      for (const [k, v] of Object.entries(ch.extra)) {
+        lines.push(`${k} = ${tomlVal(v)}`);
+      }
+    }
+
+    for (const skill of config.skills) {
+      lines.push("");
+      lines.push("[[skills]]");
+      lines.push(`name = "${esc(skill.name)}"`);
+      lines.push(`enabled = ${skill.enabled}`);
+    }
+
+    if (config.unmapped.length > 0) {
+      lines.push("");
+      lines.push("# --- UNMAPPED FIELDS (review required) ---");
+      for (const u of config.unmapped) {
+        lines.push(
+          `# ${u.source_path}: ${u.reason} | value: ${JSON.stringify(u.value)}`,
+        );
+      }
+    }
+
+    return lines.join("\n") + "\n";
+  },
+
+  parse(_configPath: string, raw: unknown): AdapterResult {
+    const src = raw as OpenFangConfig;
+    const unmapped: UnmappedField[] = [];
+
+    // --- agent ---
+    const agentSrc = src.agent ?? {};
+    const llmSrc = src.llm ?? {};
+
+    // Split "provider/model" compound back into separate fields
+    let provider = "anthropic";
+    let model = agentSrc.model ?? "unknown";
+    if (model.includes("/")) {
+      const slash = model.indexOf("/");
+      provider = model.slice(0, slash);
+      model = model.slice(slash + 1);
+    }
+
+    if (agentSrc.max_context !== undefined) {
+      unmapped.push({
+        source_path: "agent.max_context",
+        value: agentSrc.max_context,
+        reason: "no canonical equivalent",
+      });
+    }
+    if (agentSrc.tools !== undefined) {
+      unmapped.push({
+        source_path: "agent.tools",
+        value: agentSrc.tools,
+        reason: "no canonical equivalent — use skills[]",
+      });
+    }
+    if (llmSrc.top_p !== undefined) {
+      unmapped.push({
+        source_path: "llm.top_p",
+        value: llmSrc.top_p,
+        reason: "no canonical equivalent",
+      });
+    }
+    if (llmSrc.presence_penalty !== undefined) {
+      unmapped.push({
+        source_path: "llm.presence_penalty",
+        value: llmSrc.presence_penalty,
+        reason: "no canonical equivalent",
+      });
+    }
+    if (src.telemetry !== undefined) {
+      unmapped.push({
+        source_path: "telemetry",
+        value: src.telemetry,
+        reason: "no canonical equivalent",
+      });
+    }
+    if (src.log_level !== undefined) {
+      unmapped.push({
+        source_path: "log_level",
+        value: src.log_level,
+        reason: "no canonical equivalent",
+      });
+    }
+    if (src.budget !== undefined) {
+      unmapped.push({
+        source_path: "budget",
+        value: src.budget,
+        reason: "no canonical equivalent",
+      });
+    }
+
+    const agent = {
+      name: agentSrc.name ?? "unnamed",
+      model,
+      provider,
+      ...(agentSrc.system_prompt !== undefined && {
+        system_prompt: agentSrc.system_prompt,
+      }),
+      ...(llmSrc.temperature !== undefined && {
+        temperature: llmSrc.temperature,
+      }),
+      ...(llmSrc.max_tokens !== undefined && { max_tokens: llmSrc.max_tokens }),
+    };
+
+    // --- channels (keyed record → array) ---
+    const knownKeys = new Set([
+      "bot_token_env",
+      "bot_token",
+      "guild_id",
+      "chat_id",
+      "workspace",
+      "default_agent",
+      "overrides",
+    ]);
+    const channels: CanonicalChannel[] = Object.entries(src.channels ?? {}).map(
+      ([type, ch]) => {
+        if (ch.default_agent !== undefined) {
+          unmapped.push({
+            source_path: `channels.${type}.default_agent`,
+            value: ch.default_agent,
+            reason: "no canonical equivalent",
+          });
+        }
+        if (ch.overrides !== undefined) {
+          unmapped.push({
+            source_path: `channels.${type}.overrides`,
+            value: ch.overrides,
+            reason: "no canonical equivalent",
+          });
+        }
+        const extra: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(ch)) {
+          if (!knownKeys.has(k)) extra[k] = v;
+        }
+        return {
+          type,
+          bot_token_env: ch.bot_token_env,
+          bot_token: ch.bot_token,
+          guild_id: ch.guild_id,
+          chat_id: ch.chat_id,
+          workspace: ch.workspace,
+          extra,
+        };
+      },
+    );
+
+    // --- memory ---
+    const memSrc = src.memory;
+    let memory:
+      | {
+          backend: "sqlite" | "file" | "postgres" | "unknown";
+          path?: string;
+          connection_string?: string;
+        }
+      | undefined;
+    if (memSrc) {
+      if (memSrc.vector_dims !== undefined) {
+        unmapped.push({
+          source_path: "memory.vector_dims",
+          value: memSrc.vector_dims,
+          reason: "no canonical equivalent",
+        });
+      }
+      if (memSrc.embedding_model !== undefined) {
+        unmapped.push({
+          source_path: "memory.embedding_model",
+          value: memSrc.embedding_model,
+          reason: "no canonical equivalent",
+        });
+      }
+      const backend =
+        memSrc.backend === "sqlite" ||
+        memSrc.backend === "file" ||
+        memSrc.backend === "postgres"
+          ? memSrc.backend
+          : ("unknown" as const);
+      memory = {
+        backend,
+        ...(memSrc.path !== undefined && { path: memSrc.path }),
+        ...(memSrc.connection_string !== undefined && {
+          connection_string: memSrc.connection_string,
+        }),
+      };
+    }
+
+    const skills = (src.skills ?? []).map((s) => ({
+      name: s.name,
+      enabled: s.enabled ?? true,
+      config: s.config,
+    }));
+
+    return {
+      ok: true,
+      config: { agent, channels, memory, skills, unmapped },
+    };
+  },
+};
+
+function esc(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function tomlVal(v: unknown): string {
+  if (typeof v === "string") return `"${esc(v)}"`;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  return `"${esc(JSON.stringify(v))}"`;
+}

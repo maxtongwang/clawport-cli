@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Validate adapters compile
+        run: |
+          # Ensure every adapter in src/adapters/ (except .generated.ts) is imported in index.ts
+          for f in src/adapters/*.ts; do
+            base=$(basename "$f" .ts)
+            if [[ "$base" == "index" || "$base" == *.generated ]]; then continue; fi
+            if ! grep -q "$base" src/adapters/index.ts; then
+              echo "ERROR: $base is not registered in src/adapters/index.ts"
+              exit 1
+            fi
+          done
+          echo "All adapters registered."
